@@ -153,7 +153,7 @@ export async function runAudit(o: RunOptions): Promise<{ failed: number; sheetNa
         const lh = resp?.lighthouseResult;
         if (!lh?.categories || lh.runtimeError) throw new Error(`Lighthouse failed: ${lh?.runtimeError?.message ?? "no result in response"}`);
         emit({ type: "done", ...job, ms: performance.now() - t0 });
-        return { i, entry, strategy, resp, row: toRow(entry, resp), findings: findingsOf(entry.label, strategy, lh), error: null };
+        return { i, entry, strategy, resp, row: toRow(entry, resp), findings: findingsOf(entry.label, entry.url, strategy, lh), error: null };
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         emit({ type: "failed", ...job, message: msg, ms: performance.now() - t0 });

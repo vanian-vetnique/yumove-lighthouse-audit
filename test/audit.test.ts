@@ -278,3 +278,51 @@ test("findings are ordered by page, then strategy; a failed run contributes none
   const seq = [...new Set(rows.map((r) => `${r.Page}/${r.Strategy}`))];
   assert.deepEqual(seq, ["B/mobile", "B/desktop", "A/mobile"]);
 });
+
+// ---- Offenders: what is causing each insight ----
+const offenders = (rows: ReturnType<typeof asObjects>, insight: string) => rows.find((r) => r.Insight === insight && r.Strategy === "mobile")!.Offenders;
+
+test("offenders: grouped by 1st/3rd party host, URLs shortened, values labelled and formatted", async () => {
+  const { findings } = await findingsFor(lhr());
+  assert.equal(findings.headers.at(-1), "Offenders");
+  assert.equal(offenders(asObjects(findings), "Render-blocking requests"), [
+    "yumove.co.uk (1st party)",
+    "  …/assets/ym.main.css?v=9202544… · Transfer Size: 63.6 KiB · Duration: 946 ms",
+    "  …/latest/accelerated-checkout-backwards-compat.css · Transfer Size: 2.8 KiB · Duration: 474 ms",
+    "cdn.intelligems.io (3rd party)",
+    "  …/c4291048ec8a/bundle.js · Transfer Size: 0.0 KiB · Duration: 780 ms",
+  ].join("\n"));
+});
+
+test("offenders: nested sub-items are indented under their parent", async () => {
+  const { findings } = await findingsFor(lhr());
+  assert.equal(offenders(asObjects(findings), "Legacy JavaScript"), [
+    "searchanise-ef84.kxcdn.com (3rd party)",
+    "  /widgets.39510.min.js · Wasted bytes: 10.0 KiB",
+    "    /widgets.39510.min.js:1:217196 · @babel/plugin-transform-spread",
+    "    /widgets.39510.min.js:1:273433 · Math.log10",
+  ].join("\n"));
+});
+
+test("offenders: capped at 10 lines then '+N more'", async () => {
+  const l = lhr();
+  const items = Array.from({ length: 13 }, (_, i) => ({ url: `https://yumove.co.uk/a${i}.css`, totalBytes: 1024, wastedMs: 100 + i }));
+  l.audits["render-blocking-insight"].details.items = items;
+  const { findings } = await findingsFor(l);
+  const lines = String(offenders(asObjects(findings), "Render-blocking requests")).split("\n");
+  assert.equal(lines.length, 1 + 10 + 1); // host header, 10 items, "+3 more"
+  assert.equal(lines.at(-1), "+3 more");
+});
+
+test("offenders: checklists list only failed checks, followed by the element", async () => {
+  const { findings } = await findingsFor(lhr());
+  const lines = String(offenders(asObjects(findings), "LCP request discovery")).split("\n");
+  assert.equal(lines[0], "✗ fetchpriority=high should be applied to the image preload request");
+  assert.equal(lines.length, 2);
+  assert.match(lines[1], /^ul#product-gallery/);
+});
+
+test("offenders: insights without a useful table keep their row with an empty cell", async () => {
+  const { findings } = await findingsFor(lhr());
+  assert.equal(offenders(asObjects(findings), "Network dependency tree"), null);
+});

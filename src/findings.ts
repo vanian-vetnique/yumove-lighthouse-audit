@@ -10,12 +10,13 @@ export type Finding = {
   metrics: string;
   about: string;
   learnMore: string | null;
+  offenders: string | null;
   key: number; // largest metric saving in ms, for ranking
 };
 
-export const FINDINGS_HEADERS = ["Page", "Strategy", "Category", "Insight", "Est. savings", "Metrics affected", "About", "Learn more"];
+export const FINDINGS_HEADERS = ["Page", "Strategy", "Category", "Insight", "Est. savings", "Metrics affected", "About", "Learn more", "Offenders"];
 export const FINDINGS_COLUMNS: Column[] = [
-  { width: 24 }, { width: 14, align: "center" }, { width: 18 }, { width: 34 }, { width: 22 }, { width: 24 }, { width: 60 }, { width: 14, align: "center" },
+  { width: 24 }, { width: 14, align: "center" }, { width: 18 }, { width: 34 }, { width: 22 }, { width: 24 }, { width: 60 }, { width: 14, align: "center" }, { width: 70 },
 ];
 
 const EXCLUDED_MODES = ["informative", "manual", "notApplicable", "error"];
@@ -38,7 +39,7 @@ const rankKey = (savings: Record<string, number> | undefined) =>
   Math.max(0, ...Object.entries(savings ?? {}).filter(([k]) => k !== "CLS").map(([, v]) => v));
 
 /** Failing insights (Performance) and failing audits (other categories) for one run, in report order. */
-export function findingsOf(page: string, strategy: Strategy, lhr: any): Finding[] {
+export function findingsOf(page: string, pageUrl: string, strategy: Strategy, lhr: any): Finding[] {
   const out: Finding[] = [];
   for (const cat of CATEGORY_ORDER) {
     const category = lhr.categories?.[cat];
@@ -57,6 +58,7 @@ export function findingsOf(page: string, strategy: Strategy, lhr: any): Finding[
         metrics: metricsText(a.metricSavings),
         about: plain(a.description ?? ""),
         learnMore: (a.description ?? "").match(LINK)?.[2] ?? null,
+        offenders: offendersText(a.details, new URL(pageUrl).hostname),
         key: rankKey(a.metricSavings),
       });
     }
@@ -69,4 +71,111 @@ export function findingsOf(page: string, strategy: Strategy, lhr: any): Finding[
 export const findingRow = (f: Finding): Cell[] => [
   f.page, f.strategy, f.category, f.title, f.savings, f.metrics, f.about,
   f.learnMore ? { text: "Learn more", hyperlink: f.learnMore } : null,
+  f.offenders,
 ];
+
+// ---- Offenders: the things causing an insight, rendered from the insight's own details ----
+const CAP = 10;
+type Section = { group?: string; lines: string[] };
+
+const trunc = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s);
+
+function shortUrl(u: string, withHost: boolean): string {
+  let url: URL;
+  try { url = new URL(u); } catch { return trunc(u, 80); }
+  const segs = url.pathname.split("/").filter(Boolean);
+  const path = segs.length > 2 ? `…/${segs.slice(-2).join("/")}` : `/${segs.join("/")}`;
+  const query = trunc(url.search, 10);
+  return `${withHost ? url.host : ""}${path}${query}`;
+}
+
+function formatValue(v: any, valueType: string | undefined, withHost: boolean): string | null {
+  if (v === null || v === undefined || v === "") return null;
+  const type = v?.type ?? valueType; // detail objects carry their own type
+  const raw = typeof v === "object" && "value" in v ? v.value : v;
+  switch (type) {
+    case "url": return typeof raw === "string" ? shortUrl(raw, withHost) : null;
+    case "bytes": return typeof raw === "number" ? `${(raw / 1024).toFixed(1)} KiB` : null;
+    case "ms": case "timespanMs": return typeof raw === "number" ? ms(raw) : null;
+    case "numeric": case "integer": return typeof raw === "number" ? String(Number(raw.toFixed(1))) : null;
+    case "link": return v?.text ?? null;
+    case "source-location":
+      return v?.url ? `${shortUrl(v.url, withHost)}${typeof v.line === "number" ? `:${v.line + 1}:${v.column ?? 0}` : ""}` : null;
+    case "node": {
+      const sel = trunc(v?.selector ?? v?.snippet ?? "", 120);
+      const why = trunc(String(v?.explanation ?? "").replace(/\s+/g, " ").trim(), 160);
+      return sel ? (why ? `${sel} — ${why}` : sel) : null;
+    }
+    default: return typeof raw === "string" || typeof raw === "number" ? String(raw) : null;
+  }
+}
+
+const party = (host: string, pageHost: string) => {
+  const bare = (h: string) => h.replace(/^www\./, "");
+  const [h, p] = [bare(host), bare(pageHost)];
+  return h === p || h.endsWith(`.${p}`) || p.endsWith(`.${h}`) ? "1st party" : "3rd party";
+};
+
+function tableSections(d: any, pageHost: string): Section[] {
+  const headings: any[] = d.headings ?? [];
+  const grouped = headings[0]?.valueType === "url";
+  const byHost = new Map<string, Section>();
+  const flat: Section = { lines: [] };
+  for (const item of d.items ?? []) {
+    const parts = headings.map((h, i) => {
+      const t = h.key == null ? null : formatValue(item[h.key], h.valueType, !grouped);
+      return t && i > 0 && h.label ? `${h.label}: ${t}` : t;
+    });
+    const lines = [parts.filter(Boolean).join(" · ")];
+    for (const sub of item.subItems?.items ?? []) {
+      const vals = headings.flatMap((h) => {
+        if (!h.subItemsHeading) return [];
+        const sh = h.subItemsHeading;
+        return [formatValue(sub[sh.key === undefined ? h.key : sh.key], sh.valueType ?? h.valueType, !grouped)];
+      });
+      lines.push(`  ${vals.filter(Boolean).join(" · ")}`);
+    }
+    if (!lines[0]) continue;
+    let target = flat;
+    if (grouped && typeof item[headings[0].key] === "string") {
+      let host = "";
+      try { host = new URL(item[headings[0].key]).hostname; } catch {}
+      if (host) {
+        if (!byHost.has(host)) byHost.set(host, { group: `${host} (${party(host, pageHost)})`, lines: [] });
+        target = byHost.get(host)!;
+      }
+    }
+    target.lines.push(...lines.map((l) => (target === flat ? l : `  ${l}`)));
+  }
+  const groups = [...byHost.values()].sort((a, b) => Number(a.group!.endsWith("(3rd party)")) - Number(b.group!.endsWith("(3rd party)")));
+  return [...groups, flat].filter((s) => s.lines.length);
+}
+
+function detailSections(d: any, pageHost: string): Section[] {
+  switch (d?.type) {
+    case "table": case "opportunity": return tableSections(d, pageHost);
+    case "list": return (d.items ?? []).flatMap((i: any) => detailSections(i, pageHost));
+    case "checklist": {
+      const failed = Object.values<any>(d.items ?? {}).filter((c) => c?.value === false).map((c) => `✗ ${c.label}`);
+      return failed.length ? [{ lines: failed }] : [];
+    }
+    case "node": { const t = formatValue(d, "node", true); return t ? [{ lines: [t] }] : []; }
+    default: return []; // debugdata, network-tree and other shapes carry nothing readable
+  }
+}
+
+function offendersText(details: any, pageHost: string): string | null {
+  const out: string[] = [];
+  let shown = 0, more = 0;
+  for (const sec of detailSections(details, pageHost)) {
+    let headed = false;
+    for (const line of sec.lines) {
+      if (shown >= CAP) { more++; continue; }
+      if (sec.group && !headed) { out.push(sec.group); headed = true; }
+      out.push(line);
+      shown++;
+    }
+  }
+  if (more) out.push(`+${more} more`);
+  return out.length ? out.join("\n") : null;
+}
