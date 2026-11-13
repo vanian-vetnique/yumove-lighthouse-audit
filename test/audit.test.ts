@@ -319,10 +319,34 @@ test("offenders: checklists list only failed checks, followed by the element", a
   const lines = String(offenders(asObjects(findings), "LCP request discovery")).split("\n");
   assert.equal(lines[0], "✗ fetchpriority=high should be applied to the image preload request");
   assert.equal(lines.length, 2);
-  assert.match(lines[1], /^ul#product-gallery/);
+  assert.match(lines[1], /^….*img\.aspect-auto$/); // long selectors keep their tail: the element itself
 });
 
 test("offenders: insights without a useful table keep their row with an empty cell", async () => {
   const { findings } = await findingsFor(lhr());
   assert.equal(offenders(asObjects(findings), "Network dependency tree"), null);
+});
+
+// ---- Other categories: failing audits in the same layout ----
+test("accessibility, best-practices and SEO failures follow the Performance rows, with element offenders", async () => {
+  const { findings } = await findingsFor(lhr());
+  const mobile = asObjects(findings).filter((r) => r.Strategy === "mobile");
+  const cats = [...new Set(mobile.map((r) => r.Category))];
+  assert.deepEqual(cats, ["Performance", "Accessibility", "Best Practices"]);
+  const titles = mobile.map((r) => r.Insight);
+  assert.ok(!titles.includes(lhr().audits["image-alt"].title), "passing audit excluded");
+  assert.ok(!titles.includes(lhr().audits["document-title"].title), "passing SEO audit excluded");
+  const cc = mobile.find((r) => r.Category === "Accessibility")!;
+  assert.equal(cc["Est. savings"], "-");
+  assert.equal(cc["Metrics affected"], "-");
+  assert.deepEqual(cc["Learn more"], { text: "Learn more", hyperlink: "https://dequeuniversity.com/rules/axe/4.14/color-contrast" });
+  const lines = String(cc.Offenders).split("\n");
+  assert.match(lines[0], /^….*a#CybotCookiebotDialogBodyContentTextShowIABVendors — Element has insufficient color contrast of 2\.67/);
+  assert.match(lines[1], /^ {2}.*div#CybotCookiebotDialog$/); // related node, indented
+});
+
+test("failing console errors list source and message", async () => {
+  const { findings } = await findingsFor(lhr());
+  const e = asObjects(findings).find((r) => r.Category === "Best Practices")!;
+  assert.equal(String(e.Offenders).split("\n")[0], "yumove.co.uk/products/yumove-joint-care-plus-max-strength-for-dogs:1035:16 · Description: [Bloomreach Unified Tracking] Shopify.analytics object is not available");
 });

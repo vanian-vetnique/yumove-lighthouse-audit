@@ -102,8 +102,9 @@ function formatValue(v: any, valueType: string | undefined, withHost: boolean): 
     case "source-location":
       return v?.url ? `${shortUrl(v.url, withHost)}${typeof v.line === "number" ? `:${v.line + 1}:${v.column ?? 0}` : ""}` : null;
     case "node": {
-      const sel = trunc(v?.selector ?? v?.snippet ?? "", 120);
-      const why = trunc(String(v?.explanation ?? "").replace(/\s+/g, " ").trim(), 160);
+      const full: string = v?.selector ?? v?.snippet ?? "";
+      const sel = full.length > 100 ? `…${full.slice(-100)}` : full; // the end of a selector is the element itself
+      const why = trunc(String(v?.explanation ?? "").replace(/^Fix (any|all) of the following:/, "").replace(/\s+/g, " ").trim(), 220);
       return sel ? (why ? `${sel} — ${why}` : sel) : null;
     }
     default: return typeof raw === "string" || typeof raw === "number" ? String(raw) : null;
