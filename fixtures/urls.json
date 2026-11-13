@@ -1,5 +1,9 @@
 [
   { "label": "Home", "type": "home", "url": "https://yumove.co.uk/" },
-  { "label": "PDP – Joint Care", "type": "pdp", "url": "https://yumove.co.uk/products/yumove-joint-care-plus-max-strength-for-dogs" },
-  { "label": "PLP", "type": "plp", "url": "https://yumove.co.uk/collections/all" }
+  { "label": "PDP", "type": "pdp", "url": "https://yumove.co.uk/products/yumove-joint-care-plus-max-strength-for-dogs" },
+  { "label": "PLP", "type": "plp", "url": "https://yumove.co.uk/collections/dog-joint-supplements" },
+  { "label": "Blogs", "type": "blogs", "url": "https://yumove.co.uk/blogs/dog-expert-advice/tagged/dog-joints" },
+  { "label": "Blog Post", "type": "blogs", "url": "https://yumove.co.uk/blogs/dog-expert-advice/how-a-dogs-gut-health-affects-their-immune-system" },
+  { "label": "Search", "type": "search", "url": "https://yumove.co.uk/pages/search-results-page?q=joint%20care%20for%20senior%20dogs" },
+  { "label": "Cart", "type": "cart", "url": "https://yumove.co.uk/cart" }
 ]
