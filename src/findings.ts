@@ -19,6 +19,12 @@ export const FINDINGS_COLUMNS: Column[] = [
   { width: 24 }, { width: 14, align: "center" }, { width: 18 }, { width: 34 }, { width: 22 }, { width: 24 }, { width: 60 }, { width: 14, align: "center" }, { width: 70 },
 ];
 
+export const SUMMARY_HEADERS = ["Category", "Runs affected", "Largest saving", "Insight", "Est. savings", "Metrics affected", "About", "Learn more"];
+// Leading columns share widths with the detail table below it, since both stack on the same sheet columns.
+export const SUMMARY_COLUMNS: Column[] = [
+  { width: 24 }, { width: 14, align: "center" }, { width: 18, align: "center" }, { width: 34 }, { width: 22 }, { width: 24 }, { width: 60 }, { width: 14, align: "center" },
+];
+
 const EXCLUDED_MODES = ["informative", "manual", "notApplicable", "error"];
 const CATEGORY_ORDER = ["performance", "accessibility", "best-practices", "seo"];
 const LINK = /\[([^\]]*)\]\(([^)]*)\)/;
@@ -89,14 +95,17 @@ function shortUrl(u: string, withHost: boolean): string {
   return `${withHost ? url.host : ""}${path}${query}`;
 }
 
-function formatValue(v: any, valueType: string | undefined, withHost: boolean): string | null {
+const duration = (n: number) =>
+  n < 1000 ? ms(n) : n < 60_000 ? `${Math.round(n / 1000)} s` : n < 3_600_000 ? `${Math.round(n / 60_000)} min` : n < 86_400_000 ? `${Math.round(n / 3_600_000)} h` : `${Math.round(n / 86_400_000)} d`;
+
+function formatValue(v: any, valueType: string | undefined, withHost: boolean, displayUnit?: string): string | null {
   if (v === null || v === undefined || v === "") return null;
   const type = v?.type ?? valueType; // detail objects carry their own type
   const raw = typeof v === "object" && "value" in v ? v.value : v;
   switch (type) {
     case "url": return typeof raw === "string" ? shortUrl(raw, withHost) : null;
     case "bytes": return typeof raw === "number" ? `${(raw / 1024).toFixed(1)} KiB` : null;
-    case "ms": case "timespanMs": return typeof raw === "number" ? ms(raw) : null;
+    case "ms": case "timespanMs": return typeof raw === "number" ? (displayUnit === "duration" ? duration(raw) : ms(raw)) : null;
     case "numeric": case "integer": return typeof raw === "number" ? String(Number(raw.toFixed(1))) : null;
     case "link": return v?.text ?? null;
     case "source-location":
@@ -124,7 +133,7 @@ function tableSections(d: any, pageHost: string): Section[] {
   const flat: Section = { lines: [] };
   for (const item of d.items ?? []) {
     const parts = headings.map((h, i) => {
-      const t = h.key == null ? null : formatValue(item[h.key], h.valueType, !grouped);
+      const t = h.key == null ? null : formatValue(item[h.key], h.valueType, !grouped, h.displayUnit);
       return t && i > 0 && h.label ? `${h.label}: ${t}` : t;
     });
     const lines = [parts.filter(Boolean).join(" · ")];
@@ -179,4 +188,20 @@ function offendersText(details: any, pageHost: string): string | null {
   }
   if (more) out.push(`+${more} more`);
   return out.length ? out.join("\n") : null;
+}
+
+/** One row per insight across the run: how widespread it is, and the biggest saving seen. */
+export function summaryRows(findings: Finding[], totalRuns: number): Cell[][] {
+  const groups = new Map<string, Finding[]>(); // insertion order = first appearance
+  for (const f of findings) {
+    const k = `${f.category}/${f.id}`;
+    groups.set(k, [...(groups.get(k) ?? []), f]);
+  }
+  return [...groups.values()]
+    .map((fs, i) => ({ fs, i, top: fs.reduce((a, b) => (b.key > a.key ? b : a)) }))
+    .sort((a, b) => b.fs.length - a.fs.length || b.top.key - a.top.key || a.i - b.i)
+    .map(({ fs, top }) => [
+      top.category, `${fs.length} of ${totalRuns} runs`, top.key ? ms(top.key) : "-", top.title, top.savings, top.metrics, top.about,
+      top.learnMore ? { text: "Learn more", hyperlink: top.learnMore } : null,
+    ]);
 }

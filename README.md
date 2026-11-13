@@ -1,6 +1,6 @@
 # YuMove Lighthouse audit
 
-Runs a list of public URLs through the PageSpeed Insights (PSI) API (mobile, then desktop, all four Lighthouse categories) and adds one new tab per run to an Excel workbook. Lighthouse HTML reports (one per URL and strategy) are saved to `<RAW_RESULTS_PATH or raw-results>/<run>/`; open them in a browser.
+Runs a list of public URLs through the PageSpeed Insights (PSI) API (mobile, then desktop, all four Lighthouse categories) and adds two new tabs per run to an Excel workbook (scores, and findings). Lighthouse HTML reports (one per URL and strategy) are saved to `<RAW_RESULTS_PATH or raw-results>/<run>/`; open them in a browser.
 
 ## Setup
 
@@ -26,7 +26,10 @@ While running, the CLI prints a line when each call starts (`[n/total] strategy 
 
 ## Reading the report
 
-Each tab has a run-details block, a **Mobile** table, a **Desktop** table (scores 0–100 colour-coded 90+ green, 50–89 orange, <50 red via conditional formatting; lab and field LCP/CLS/INP/TBT; blank field cells mean Chrome has no page-level data) and a **Findings** table (scored audits below 0.9; filter by Category/Strategy using the header dropdowns).
+Each run adds two tabs.
+
+- `<run>`: a run-details block, a **Mobile** table and a **Desktop** table (scores 0–100 colour-coded 90+ green, 50–89 orange, <50 red via conditional formatting; lab and field LCP/CLS/INP/TBT; blank field cells mean Chrome has no page-level data).
+- `<run> findings`: a **Findings summary** (one row per issue across the run: how many runs it affects, the largest saving, ranked so site-wide problems come first) above a **Findings** table (one row per failing Lighthouse insight or audit, per page and strategy). Each row shows the estimated saving, which metrics it affects, Lighthouse's explanation and docs link, and **Offenders**: the files or elements causing it, grouped by 1st/3rd-party host and capped at 10 lines. Performance rows are Lighthouse insights only; Accessibility, Best practices and SEO list their failing audits. Filter the detail table with the header dropdowns.
 
 ## Known limits
 

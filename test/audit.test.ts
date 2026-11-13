@@ -350,3 +350,51 @@ test("failing console errors list source and message", async () => {
   const e = asObjects(findings).find((r) => r.Category === "Best Practices")!;
   assert.equal(String(e.Offenders).split("\n")[0], "yumove.co.uk/products/yumove-joint-care-plus-max-strength-for-dogs:1035:16 · Description: [Bloomreach Unified Tracking] Shopify.analytics object is not available");
 });
+
+// ---- Findings summary: one row per insight across the run ----
+const twoPages = JSON.stringify([{ label: "A", type: "x", url: "https://yumove.co.uk/a" }, { label: "B", type: "x", url: "https://yumove.co.uk/b" }]);
+const summaryOf = (sheets: Sheet[]) => asObjects(sheets[1].tables.find((t) => t.title === "Findings summary")!);
+
+test("summary sits above the detail on the findings tab, ranked by runs affected then largest saving", async () => {
+  const { run, sheets } = setup(async ({ url, strategy }) => {
+    const l = lhr();
+    if (url.endsWith("/b") && strategy === "desktop") l.audits["render-blocking-insight"].score = 1; // fixed on this run
+    return { lighthouseResult: l };
+  }, twoPages);
+  await run();
+  assert.deepEqual(sheets[1].tables.map((t) => t.title), ["Findings summary", "Findings"]);
+  assert.equal(sheets[1].tables[1].filter, true);
+  const rows = summaryOf(sheets);
+  assert.deepEqual(rows.map((r) => r.Insight), [
+    "Use efficient cache lifetimes", "Forced reflow", "LCP request discovery", "Legacy JavaScript", "Network dependency tree",
+    lhr().audits["color-contrast"].title, lhr().audits["errors-in-console"].title,
+    "Render-blocking requests", // 3 of 4 runs, so after everything that hits all four
+  ]);
+  const rb = rows.at(-1)!;
+  assert.deepEqual([rb["Runs affected"], rb["Largest saving"], rb["Est. savings"], rb["Metrics affected"], rb.Category], ["3 of 4 runs", "850 ms", "Est savings of 860 ms", "FCP -850 ms", "Performance"]);
+  assert.deepEqual(rb["Learn more"], { text: "Learn more", hyperlink: "https://developer.chrome.com/docs/performance/insights/render-blocking" });
+  assert.equal(rows[0]["Largest saving"], "-");
+});
+
+test("summary counts only runs that produced a result", async () => {
+  const { run, sheets } = setup(async ({ url, strategy }) => {
+    if (url.endsWith("/a") && strategy === "desktop") throw Object.assign(new Error("PSI 400: bad"), { status: 400 });
+    return { lighthouseResult: lhr() };
+  }, twoPages);
+  await run();
+  assert.equal(summaryOf(sheets)[0]["Runs affected"], "3 of 3 runs");
+});
+
+test("an insight can rank first by larger saving among equally widespread ones", async () => {
+  const l = lhr();
+  l.audits["cache-insight"].metricSavings = { LCP: 1200, FCP: 0 };
+  const { run, sheets } = setup(async () => ({ lighthouseResult: l }), twoPages);
+  await run();
+  assert.deepEqual(summaryOf(sheets).slice(0, 2).map((r) => [r.Insight, r["Largest saving"]]), [["Use efficient cache lifetimes", "1,200 ms"], ["Render-blocking requests", "850 ms"]]);
+});
+
+test("offenders: long durations such as cache lifetimes read as minutes or hours, not thousands of ms", async () => {
+  const { findings } = await findingsFor(lhr());
+  const text = String(offenders(asObjects(findings), "Use efficient cache lifetimes"));
+  assert.match(text, /consent-sdk-2\.3\.js · Cache TTL: 13 min · Transfer Size: 88\.0 KiB/);
+});
