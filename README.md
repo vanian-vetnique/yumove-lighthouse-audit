@@ -31,7 +31,7 @@ Each tab has a run-details block, a **Mobile** table, a **Desktop** table (score
 - Low-traffic pages have no field data; there is no origin-level fallback.
 - The workbook is locked while open in Excel on Windows.
 - The workbook is script-owned: exceljs rewrites the whole file, so hand-added charts or objects are lost.
-- Failed calls are retried (3 times, exponential backoff) only on 429/5xx.
+- Failed calls are retried (3 times, exponential backoff) on 429, 5xx and network errors (not other 4xx).
 - Field CLS: PSI reports the percentile as CLS × 100; the script divides by 100. **Not yet verified against a live response** (see Smoke run).
 
 ## Planned, out of scope

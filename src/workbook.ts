@@ -33,7 +33,7 @@ export function createWorkbookWriter(path: string) {
       const first = ws.rowCount + 1;
       for (const r of t.rows) ws.addRow(r);
       const last = ws.rowCount;
-      if (t.filter) ws.autoFilter = { from: { row: header.number, column: 1 }, to: { row: last, column: t.headers.length } };
+      if (t.filter && last > header.number) ws.autoFilter = { from: { row: header.number, column: 1 }, to: { row: last, column: t.headers.length } };
       if (t.scoreColumns && last >= first) {
         for (const c of t.scoreColumns) {
           const col = ws.getColumn(c + 1).letter;
@@ -47,11 +47,12 @@ export function createWorkbookWriter(path: string) {
         }
       }
     }
-    ws.columns.forEach((col) => {
+    for (let i = 1; i <= Math.max(...sheet.tables.map((t) => t.headers.length)); i++) {
+      const col = ws.getColumn(i);
       let w = 12;
-      col.eachCell?.({ includeEmpty: false }, (c) => { w = Math.max(w, String(c.value ?? "").length + 2); });
+      col.eachCell({ includeEmpty: false }, (c) => { w = Math.max(w, String(c.value ?? "").length + 2); });
       col.width = Math.min(w, 60);
-    });
+    }
 
     try {
       await mkdir(dirname(path), { recursive: true });

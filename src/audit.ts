@@ -49,7 +49,8 @@ export const stamp = (d: Date) =>
 
 const slug = (s: string) => s.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
 const status = (e: any): number | undefined => e?.status;
-const retryable = (e: unknown) => status(e) === 429 || (status(e) ?? 0) >= 500;
+// No status = network error or timeout, also transient.
+const retryable = (e: unknown) => status(e) === undefined || status(e) === 429 || status(e)! >= 500;
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 async function withRetry<T>(fn: () => Promise<T>, sleep: (ms: number) => Promise<void>): Promise<T> {
@@ -113,7 +114,8 @@ export function toFindings(e: Entry, strategy: Strategy, r: any): Cell[][] {
   for (const c of CATEGORIES) {
     for (const ref of categories[c]?.auditRefs ?? []) {
       const a = audits[ref.id];
-      if (!a || (a.scoreDisplayMode !== "numeric" && a.scoreDisplayMode !== "binary")) continue;
+      // Scored = everything except these modes (newer Lighthouse also uses "metricSavings").
+      if (!a || ["informative", "manual", "notApplicable", "error"].includes(a.scoreDisplayMode)) continue;
       if (typeof a.score !== "number" || a.score >= 0.9) continue;
       rows.push([e.label, strategy, categories[c].title ?? c, a.title, a.score, a.displayValue ?? null]);
     }
@@ -128,12 +130,14 @@ export async function runAudit(o: RunOptions): Promise<{ failed: number; sheetNa
   const runDir = join(o.rawDir, stamp(now).replace(/ /g, "_"));
   await mkdir(runDir, { recursive: true });
 
-  const jobs = (["mobile", "desktop"] as const).flatMap((strategy) => entries.map((entry) => ({ strategy, entry })));
+  const jobs = (["mobile", "desktop"] as const).flatMap((strategy) => entries.map((entry, i) => ({ strategy, entry, i })));
   const results = await pool(
-    jobs.map(({ strategy, entry }) => async () => {
+    jobs.map(({ strategy, entry, i }) => async () => {
       try {
         const resp = await withRetry(() => o.psi({ url: entry.url, strategy, categories: CATEGORIES }), sleep);
-        await writeFile(join(runDir, `${slug(entry.label)}-${strategy}.json`), JSON.stringify(resp));
+        await writeFile(join(runDir, `${pad(i + 1)}-${slug(entry.label)}-${strategy}.json`), JSON.stringify(resp));
+        const lh = resp?.lighthouseResult;
+        if (!lh?.categories || lh.runtimeError) throw new Error(`Lighthouse failed: ${lh?.runtimeError?.message ?? "no result in response"}`);
         return { entry, strategy, resp, row: toRow(entry, resp), findings: toFindings(entry, strategy, resp), error: null };
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);

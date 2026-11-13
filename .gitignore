@@ -2,3 +2,7 @@ node_modules/
 raw-results/
 reports/
 .env
+
+.claude
+.scratch
+docs

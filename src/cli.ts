@@ -15,7 +15,7 @@ if (!key) {
 const psi: PsiRequest = async ({ url, strategy, categories }) => {
   const q = new URLSearchParams({ url, strategy, key });
   for (const c of categories) q.append("category", c);
-  const res = await fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${q}`);
+  const res = await fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${q}`, { signal: AbortSignal.timeout(180_000) });
   if (!res.ok) {
     const body: any = await res.json().catch(() => ({}));
     // Never include the request URL here: it carries the API key.
@@ -24,8 +24,8 @@ const psi: PsiRequest = async ({ url, strategy, categories }) => {
   return res.json();
 };
 
-const { values } = parseArgs({ options: { fixture: { type: "string", default: "fixtures/urls.json" } } });
 try {
+  const { values } = parseArgs({ options: { fixture: { type: "string", default: "fixtures/urls.json" } } });
   const { failed, sheetName } = await runAudit({
     fixtureText: readFileSync(values.fixture!, "utf8"),
     fixtureName: basename(values.fixture!),

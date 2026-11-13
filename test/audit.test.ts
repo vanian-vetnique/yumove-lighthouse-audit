@@ -77,7 +77,7 @@ test("raw responses are saved per call, named by label and strategy", async () =
   const { run, rawDir } = setup(async () => resp());
   await run();
   const dir = join(rawDir, readdirSync(rawDir)[0]);
-  assert.deepEqual(readdirSync(dir).sort(), ["Home-desktop.json", "Home-mobile.json", "PDP-A-desktop.json", "PDP-A-mobile.json"]);
+  assert.deepEqual(readdirSync(dir).sort(), ["01-Home-desktop.json", "01-Home-mobile.json", "02-PDP-A-desktop.json", "02-PDP-A-mobile.json"]);
 });
 
 test("sheet has valid unique-ish name, details, Mobile/Desktop in fixture order", async () => {
@@ -164,6 +164,20 @@ test("a failing URL gets an error row, others finish, failed count reported", as
   assert.equal(home[3], 88);
   assert.equal(pdp[13], "PSI 400: bad");
   assert.deepEqual(pdp.slice(3, 13), Array(10).fill(null));
+});
+
+test("a 200 response carrying a Lighthouse runtimeError counts as a failure", async () => {
+  const { run, sheets } = setup(async () => ({ lighthouseResult: { categories: {}, runtimeError: { message: "page failed" } } }));
+  assert.equal((await run()).failed, 4);
+  assert.match(String(sheets[0].tables[0].rows[0][13]), /page failed/);
+});
+
+test("metricSavings audits below 0.9 are findings", async () => {
+  const r = resp();
+  r.lighthouseResult.audits.ok.scoreDisplayMode = "metricSavings";
+  const { run, sheets } = setup(async () => r);
+  await run();
+  assert.ok(sheets[0].tables[2].rows.some((x) => x[3] === "Just under"));
 });
 
 test("never more than 3 calls in flight", async () => {
