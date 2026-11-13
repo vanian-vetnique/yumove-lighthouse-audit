@@ -310,8 +310,8 @@ test("offenders: capped at 10 lines then '+N more'", async () => {
   l.audits["render-blocking-insight"].details.items = items;
   const { findings } = await findingsFor(l);
   const lines = String(offenders(asObjects(findings), "Render-blocking requests")).split("\n");
-  assert.equal(lines.length, 1 + 10 + 1); // host header, 10 items, "+3 more"
-  assert.equal(lines.at(-1), "+3 more");
+  assert.equal(lines.length, 10 + 1); // 10 lines (host header + 9 items), then "+4 more"
+  assert.equal(lines.at(-1), "+4 more");
 });
 
 test("offenders: checklists list only failed checks, followed by the element", async () => {

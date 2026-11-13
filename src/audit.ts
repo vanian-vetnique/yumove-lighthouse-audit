@@ -1,6 +1,6 @@
 import { access, constants, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { findingRow, findingsOf, summaryRows, FINDINGS_COLUMNS, FINDINGS_HEADERS, SUMMARY_COLUMNS, SUMMARY_HEADERS, type Finding } from "./findings.ts";
+import { findingsOf, findingsSheet, type Finding } from "./findings.ts";
 
 export const CONCURRENCY = 3; // drop to 1 if runs prove unstable
 export const MAX_RETRIES = 3;
@@ -180,14 +180,7 @@ export async function runAudit(o: RunOptions): Promise<{ failed: number; sheetNa
         { title: "Desktop", headers: HEADERS, rows: of("desktop").map((r) => r.row), scoreColumns, columns: RESULT_COLUMNS },
       ],
     },
-    {
-      name: `${sheetName} findings`,
-      details: [],
-      tables: [
-        { title: "Findings summary", headers: SUMMARY_HEADERS, rows: summaryRows(findings, results.filter((r) => !r.error).length), columns: SUMMARY_COLUMNS },
-        { title: "Findings", headers: FINDINGS_HEADERS, rows: findings.map(findingRow), filter: true, columns: FINDINGS_COLUMNS },
-      ],
-    },
+    findingsSheet(`${sheetName} findings`, findings, results.filter((r) => !r.error).length),
   ]);
   return { failed: results.filter((r) => r.error).length, sheetName };
 }

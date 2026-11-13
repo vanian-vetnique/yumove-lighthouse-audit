@@ -1,4 +1,4 @@
-import type { Cell, Column, Strategy } from "./audit.ts";
+import type { Cell, Column, Sheet, Strategy } from "./audit.ts";
 
 export type Finding = {
   page: string;
@@ -16,19 +16,20 @@ export type Finding = {
 
 export const FINDINGS_HEADERS = ["Page", "Strategy", "Category", "Insight", "Est. savings", "Metrics affected", "About", "Learn more", "Offenders"];
 export const FINDINGS_COLUMNS: Column[] = [
-  { width: 24 }, { width: 14, align: "center" }, { width: 18 }, { width: 34 }, { width: 22 }, { width: 24 }, { width: 60 }, { width: 14, align: "center" }, { width: 70 },
+  { width: 24 }, { width: 14, align: "center" }, { width: 18 }, { width: 34 }, { width: 22 }, { width: 24, align: "center" }, { width: 60 }, { width: 14, align: "center" }, { width: 70 },
 ];
 
 export const SUMMARY_HEADERS = ["Category", "Runs affected", "Largest saving", "Insight", "Est. savings", "Metrics affected", "About", "Learn more"];
 // Leading columns share widths with the detail table below it, since both stack on the same sheet columns.
 export const SUMMARY_COLUMNS: Column[] = [
-  { width: 24 }, { width: 14, align: "center" }, { width: 18, align: "center" }, { width: 34 }, { width: 22 }, { width: 24 }, { width: 60 }, { width: 14, align: "center" },
+  { width: 24 }, { width: 14, align: "center" }, { width: 18, align: "center" }, { width: 34 }, { width: 22 }, { width: 24, align: "center" }, { width: 60 }, { width: 14, align: "center" },
 ];
 
 const EXCLUDED_MODES = ["informative", "manual", "notApplicable", "error"];
 const CATEGORY_ORDER = ["performance", "accessibility", "best-practices", "seo"];
 const LINK = /\[([^\]]*)\]\(([^)]*)\)/;
 
+const link = (url: string | null): Cell => (url ? { text: "Learn more", hyperlink: url } : null);
 const plain = (md: string) => md.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/`/g, "");
 const ms = (n: number) => `${Math.round(n).toLocaleString("en-US")} ms`;
 
@@ -76,13 +77,13 @@ export function findingsOf(page: string, pageUrl: string, strategy: Strategy, lh
 
 export const findingRow = (f: Finding): Cell[] => [
   f.page, f.strategy, f.category, f.title, f.savings, f.metrics, f.about,
-  f.learnMore ? { text: "Learn more", hyperlink: f.learnMore } : null,
+  link(f.learnMore),
   f.offenders,
 ];
 
 // ---- Offenders: the things causing an insight, rendered from the insight's own details ----
 const CAP = 10;
-type Section = { group?: string; lines: string[] };
+type Section = { group?: string; third?: boolean; lines: string[] };
 
 const trunc = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
@@ -151,13 +152,13 @@ function tableSections(d: any, pageHost: string): Section[] {
       let host = "";
       try { host = new URL(item[headings[0].key]).hostname; } catch {}
       if (host) {
-        if (!byHost.has(host)) byHost.set(host, { group: `${host} (${party(host, pageHost)})`, lines: [] });
+        if (!byHost.has(host)) byHost.set(host, { group: `${host} (${party(host, pageHost)})`, third: party(host, pageHost) === "3rd party", lines: [] });
         target = byHost.get(host)!;
       }
     }
     target.lines.push(...lines.map((l) => (target === flat ? l : `  ${l}`)));
   }
-  const groups = [...byHost.values()].sort((a, b) => Number(a.group!.endsWith("(3rd party)")) - Number(b.group!.endsWith("(3rd party)")));
+  const groups = [...byHost.values()].sort((a, b) => Number(a.third) - Number(b.third));
   return [...groups, flat].filter((s) => s.lines.length);
 }
 
@@ -180,8 +181,8 @@ function offendersText(details: any, pageHost: string): string | null {
   for (const sec of detailSections(details, pageHost)) {
     let headed = false;
     for (const line of sec.lines) {
+      if (sec.group && !headed && shown < CAP) { out.push(sec.group); headed = true; shown++; }
       if (shown >= CAP) { more++; continue; }
-      if (sec.group && !headed) { out.push(sec.group); headed = true; }
       out.push(line);
       shown++;
     }
@@ -202,6 +203,16 @@ export function summaryRows(findings: Finding[], totalRuns: number): Cell[][] {
     .sort((a, b) => b.fs.length - a.fs.length || b.top.key - a.top.key || a.i - b.i)
     .map(({ fs, top }) => [
       top.category, `${fs.length} of ${totalRuns} runs`, top.key ? ms(top.key) : "-", top.title, top.savings, top.metrics, top.about,
-      top.learnMore ? { text: "Learn more", hyperlink: top.learnMore } : null,
+      link(top.learnMore),
     ]);
 }
+
+/** The second tab of a run: summary above the per-page detail. */
+export const findingsSheet = (name: string, findings: Finding[], runs: number): Sheet => ({
+  name,
+  details: [],
+  tables: [
+    { title: "Findings summary", headers: SUMMARY_HEADERS, rows: summaryRows(findings, runs), columns: SUMMARY_COLUMNS },
+    { title: "Findings", headers: FINDINGS_HEADERS, rows: findings.map(findingRow), filter: true, columns: FINDINGS_COLUMNS },
+  ],
+});
