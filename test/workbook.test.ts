@@ -11,7 +11,8 @@ const sheet = (name: string): Sheet => ({
   name,
   details: [["Run time", "now"]],
   tables: [
-    { title: "Mobile", headers: ["Label", "Type", "URL", "P"], rows: [["Home", "home", "https://a.com", 95]], scoreColumns: [3] },
+    { title: "Mobile", headers: ["Label", "Type", "URL", "P"], rows: [["Home", "home", "https://a.com", 95]], scoreColumns: [3],
+      columns: [{ width: 24 }, { width: 14 }, { width: 45 }, { width: 14, align: "center", numFmt: "0.000" }] },
     { title: "Findings", headers: ["Label", "Score"], rows: [["Home", 0.5]], filter: true },
   ],
 });
@@ -35,13 +36,31 @@ test("creates workbook, then adds tabs without touching existing ones; names sta
   const wb = await new ExcelJS.Workbook().xlsx.readFile(path);
   assert.deepEqual(wb.worksheets.map((w) => w.name), ["2026-11-13 09.05.07", "2026-11-13 09.05.07 (2)"]);
   const ws = wb.worksheets[0];
-  assert.equal(ws.getCell("A1").value, "Run details");
-  assert.equal(ws.getCell("A1").font?.bold, true);
-  assert.equal(ws.getCell("B2").value, "now");
-  const header = ws.getRow(5);
-  assert.equal(header.getCell(1).value, "Label");
-  assert.equal(header.getCell(1).font?.bold, true);
-  assert.ok(ws.getColumn(3).width! >= 15);
+  assert.equal(ws.getCell("B2").value, "Run details");
+  assert.equal(ws.getCell("B2").font?.bold, true);
+  assert.equal(ws.getCell("B3").value, "Run time");
+  assert.equal(ws.getCell("C3").value, "now");
+});
+
+test("layout: blank gutter and top row, no gridlines, styled bordered headers", async () => {
+  const path = join(mkdtempSync(join(tmpdir(), "wb-")), "h.xlsx");
+  await createWorkbookWriter(path)(sheet("a"));
+  const ws = (await new ExcelJS.Workbook().xlsx.readFile(path)).worksheets[0];
+  assert.equal(ws.views[0].showGridLines, false);
+  assert.ok(ws.getColumn(1).width! < 5);
+  for (let r = 1; r <= ws.rowCount; r++) assert.equal(ws.getCell(r, 1).value, null);
+  assert.equal(ws.getRow(1).hasValues, false);
+  assert.equal(ws.getColumn(4).width, 45); // explicit, not sized from the longest cell
+  const h = ws.getCell("B6"); // Mobile header row
+  assert.equal(h.value, "Label");
+  assert.equal(h.font?.bold, true);
+  assert.equal(h.font?.color?.argb, "FFFFFFFF");
+  assert.equal((h.fill as any).fgColor.argb, "FF334155");
+  assert.equal(h.border?.top?.style, "thin");
+  assert.equal(ws.getCell("B7").border?.bottom?.style, "thin"); // body cells bordered too
+  assert.equal(ws.getCell("B7").alignment?.vertical, "top");
+  assert.equal(ws.getCell("E6").alignment?.horizontal, "center"); // numeric column header centred
+  assert.equal(ws.getCell("E7").numFmt, "0.000");
 });
 
 test("score cells carry three conditional-format bands; findings none", async () => {
@@ -50,7 +69,7 @@ test("score cells carry three conditional-format bands; findings none", async ()
   const ws = (await new ExcelJS.Workbook().xlsx.readFile(path)).worksheets[0];
   const cf = (ws as any).conditionalFormattings as { ref: string; rules: { operator: string }[] }[];
   assert.equal(cf.length, 1);
-  assert.equal(cf[0].ref, "D6:D6");
+  assert.equal(cf[0].ref, "E7:E7");
   assert.deepEqual(cf[0].rules.map((r) => r.operator), ["greaterThan", "between", "lessThan"]);
 });
 

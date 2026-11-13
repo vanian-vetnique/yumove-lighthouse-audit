@@ -6,8 +6,9 @@ export const MAX_RETRIES = 3;
 export const CATEGORIES = ["performance", "accessibility", "best-practices", "seo"] as const;
 export type Strategy = "mobile" | "desktop";
 export type Entry = { label: string; type: string; url: string };
-export type Cell = string | number | null;
-export type Table = { title: string; headers: string[]; rows: Cell[][]; scoreColumns?: number[]; filter?: boolean };
+export type Cell = string | number | null | { text: string; hyperlink: string };
+export type Column = { width?: number; align?: "left" | "center"; numFmt?: string };
+export type Table = { title: string; headers: string[]; rows: Cell[][]; scoreColumns?: number[]; filter?: boolean; columns?: Column[] };
 export type Sheet = { name: string; details: [string, string][]; tables: Table[] };
 export type PsiRequest = (p: { url: string; strategy: Strategy; categories: readonly string[] }) => Promise<any>;
 type Job = { index: number; total: number; strategy: Strategy; label: string; url: string };
@@ -95,6 +96,13 @@ export const HEADERS = [
   "Lab LCP (ms)", "Lab CLS", "Lab TBT (ms)", "Field LCP (ms)", "Field CLS", "Field INP (ms)", "Error",
 ];
 
+const num = { width: 14, align: "center" as const };
+const RESULT_COLUMNS: Column[] = [
+  { width: 24 }, { width: 14 }, { width: 45 }, num, num, num, num,
+  { ...num, numFmt: "#,##0" }, { ...num, numFmt: "0.000" }, { ...num, numFmt: "#,##0" },
+  { ...num, numFmt: "#,##0" }, { ...num, numFmt: "0.000" }, { ...num, numFmt: "#,##0" }, { width: 45 },
+];
+
 export function toRow(e: Entry, r: any): Cell[] {
   const lh = r.lighthouseResult;
   const cats = lh.categories;
@@ -178,8 +186,8 @@ export async function runAudit(o: RunOptions): Promise<{ failed: number; sheetNa
     name: sheetName,
     details: [["Run time", now.toISOString()], ["Lighthouse version", version], ["Fixture file", o.fixtureName]],
     tables: [
-      { title: "Mobile", headers: HEADERS, rows: of("mobile").map((r) => r.row), scoreColumns },
-      { title: "Desktop", headers: HEADERS, rows: of("desktop").map((r) => r.row), scoreColumns },
+      { title: "Mobile", headers: HEADERS, rows: of("mobile").map((r) => r.row), scoreColumns, columns: RESULT_COLUMNS },
+      { title: "Desktop", headers: HEADERS, rows: of("desktop").map((r) => r.row), scoreColumns, columns: RESULT_COLUMNS },
       {
         title: "Findings",
         headers: ["Label", "Strategy", "Category", "Audit", "Score", "Display value"],
