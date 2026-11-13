@@ -16,6 +16,7 @@ export type RunOptions = {
   psi: PsiRequest;
   writeSheet: (sheet: Sheet) => Promise<void>;
   rawDir: string;
+  renderReport: (lhr: any) => string; // Lighthouse HTML report generator
   now?: Date;
   sleep?: (ms: number) => Promise<void>;
 };
@@ -135,7 +136,7 @@ export async function runAudit(o: RunOptions): Promise<{ failed: number; sheetNa
     jobs.map(({ strategy, entry, i }) => async () => {
       try {
         const resp = await withRetry(() => o.psi({ url: entry.url, strategy, categories: CATEGORIES }), sleep);
-        await writeFile(join(runDir, `${pad(i + 1)}-${slug(entry.label)}-${strategy}.json`), JSON.stringify(resp));
+        await writeFile(join(runDir, `${pad(i + 1)}-${slug(entry.label)}-${strategy}.html`), o.renderReport(resp.lighthouseResult));
         const lh = resp?.lighthouseResult;
         if (!lh?.categories || lh.runtimeError) throw new Error(`Lighthouse failed: ${lh?.runtimeError?.message ?? "no result in response"}`);
         return { entry, strategy, resp, row: toRow(entry, resp), findings: toFindings(entry, strategy, resp), error: null };

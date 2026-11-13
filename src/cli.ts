@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { parseArgs } from "node:util";
+import { ReportGenerator } from "lighthouse/report/generator/report-generator.js";
 import { runAudit, type PsiRequest } from "./audit.ts";
 import { createWorkbookWriter, workbookPath } from "./workbook.ts";
 
@@ -32,6 +33,7 @@ try {
     psi,
     writeSheet: createWorkbookWriter(workbookPath(process.env)),
     rawDir: "raw-results",
+    renderReport: (lhr) => ReportGenerator.generateReportHtml(lhr),
   });
   console.log(`Wrote tab "${sheetName}"${failed ? `; ${failed} call(s) failed` : ""}`);
   process.exitCode = failed ? 1 : 0;

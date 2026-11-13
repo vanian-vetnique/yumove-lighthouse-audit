@@ -11,7 +11,8 @@
     "test": "node --test \"test/*.test.ts\""
   },
   "dependencies": {
-    "exceljs": "^4.4.0"
+    "exceljs": "^4.4.0",
+    "lighthouse": "^13.6.0"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

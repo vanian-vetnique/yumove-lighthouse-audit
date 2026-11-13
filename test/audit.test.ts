@@ -49,7 +49,7 @@ function setup(psi: PsiRequest, text = fixture) {
   const sheets: Sheet[] = [];
   const rawDir = mkdtempSync(join(tmpdir(), "raw-"));
   const run = () =>
-    runAudit({ fixtureText: text, fixtureName: "urls.json", psi, writeSheet: async (s) => void sheets.push(s), rawDir, sleep: async () => {}, now: new Date(2026, 10, 13, 9, 5, 7) });
+    runAudit({ fixtureText: text, fixtureName: "urls.json", psi, writeSheet: async (s) => void sheets.push(s), rawDir, renderReport: () => "<html></html>", sleep: async () => {}, now: new Date(2026, 10, 13, 9, 5, 7) });
   return { sheets, rawDir, run };
 }
 
@@ -73,11 +73,11 @@ test("mobile calls precede desktop calls, each asking for all four categories", 
   assert.deepEqual(seen, ["mobile", "mobile", "desktop", "desktop"]);
 });
 
-test("raw responses are saved per call, named by label and strategy", async () => {
+test("HTML reports are saved per call, named by label and strategy", async () => {
   const { run, rawDir } = setup(async () => resp());
   await run();
   const dir = join(rawDir, readdirSync(rawDir)[0]);
-  assert.deepEqual(readdirSync(dir).sort(), ["01-Home-desktop.json", "01-Home-mobile.json", "02-PDP-A-desktop.json", "02-PDP-A-mobile.json"]);
+  assert.deepEqual(readdirSync(dir).sort(), ["01-Home-desktop.html", "01-Home-mobile.html", "02-PDP-A-desktop.html", "02-PDP-A-mobile.html"]);
 });
 
 test("sheet has valid unique-ish name, details, Mobile/Desktop in fixture order", async () => {
@@ -138,7 +138,7 @@ test("429/5xx retried up to 3 times with backoff; other 4xx not retried", async 
     return resp();
   };
   const a = setup(flaky, JSON.stringify([{ label: "A", type: "x", url: "https://a.com" }]));
-  const r = await runAudit({ fixtureText: JSON.stringify([{ label: "A", type: "x", url: "https://a.com" }]), fixtureName: "f", psi: flaky, writeSheet: async () => {}, rawDir: a.rawDir, sleep: async (ms) => void delays.push(ms) });
+  const r = await runAudit({ fixtureText: JSON.stringify([{ label: "A", type: "x", url: "https://a.com" }]), fixtureName: "f", psi: flaky, writeSheet: async () => {}, rawDir: a.rawDir, renderReport: () => "<html></html>", sleep: async (ms) => void delays.push(ms) });
   assert.equal(r.failed, 0);
   assert.deepEqual(delays.sort((a, b) => a - b), [1000, 1000, 2000, 2000, 4000, 4000]);
 

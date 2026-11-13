@@ -1,6 +1,6 @@
 # YuMove Lighthouse audit
 
-Runs a list of public URLs through the PageSpeed Insights (PSI) API (mobile, then desktop, all four Lighthouse categories) and adds one new tab per run to an Excel workbook. Raw PSI responses are saved to `raw-results/<run>/`.
+Runs a list of public URLs through the PageSpeed Insights (PSI) API (mobile, then desktop, all four Lighthouse categories) and adds one new tab per run to an Excel workbook. Lighthouse HTML reports (one per URL and strategy) are saved to `raw-results/<run>/`; open them in a browser.
 
 ## Setup
 
@@ -19,7 +19,7 @@ npm run audit -- --fixture fixtures/small.json # another fixture
 npm test && npm run typecheck
 ```
 
-Exit code is non-zero if any URL failed (error rows appear in the tables) or the workbook could not be saved. If the save fails because the file is open in Excel, close it and re-run; raw results are already on disk.
+Exit code is non-zero if any URL failed (error rows appear in the tables) or the workbook could not be saved. If the save fails because the file is open in Excel, close it and re-run; the HTML reports are already on disk.
 
 ## Reading the report
 
