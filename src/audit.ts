@@ -1,5 +1,5 @@
 import { access, constants, mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import { findingsOf, findingsSheet, type Finding } from "./findings.ts";
 
 export const CONCURRENCY = 3; // drop to 1 if runs prove unstable
@@ -24,6 +24,7 @@ export type RunOptions = {
   psi: PsiRequest;
   writeSheets: (sheets: Sheet[]) => Promise<void>; // one call so the workbook is saved once
   rawDir: string;
+  workbookDir?: string; // raw-result links are relative to this folder
   renderReport: (lhr: any) => string; // Lighthouse HTML report generator
   now?: Date;
   sleep?: (ms: number) => Promise<void>;
@@ -149,11 +150,12 @@ export async function runAudit(o: RunOptions): Promise<{ failed: number; sheetNa
       emit({ type: "start", ...job });
       try {
         const resp = await withRetry(() => o.psi({ url: entry.url, strategy, categories: CATEGORIES }), sleep, (attempt) => emit({ type: "retry", ...job, attempt }));
-        await writeFile(join(runDir, `${pad(i + 1)}-${slug(entry.label)}-${strategy}.html`), o.renderReport(resp.lighthouseResult));
+        const file = join(runDir, `${pad(i + 1)}-${slug(entry.label)}-${strategy}.html`);
+        await writeFile(file, o.renderReport(resp.lighthouseResult));
         const lh = resp?.lighthouseResult;
         if (!lh?.categories || lh.runtimeError) throw new Error(`Lighthouse failed: ${lh?.runtimeError?.message ?? "no result in response"}`);
         emit({ type: "done", ...job, ms: performance.now() - t0 });
-        return { i, entry, strategy, resp, row: toRow(entry, resp), findings: findingsOf(entry.label, entry.url, strategy, lh), error: null };
+        return { i, entry, strategy, resp, row: toRow(entry, resp), findings: findingsOf(entry.label, entry.url, strategy, lh, relative(o.workbookDir ?? ".", file).split(sep).join("/")), error: null };
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         emit({ type: "failed", ...job, message: msg, ms: performance.now() - t0 });

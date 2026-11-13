@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { basename } from "node:path";
+import { basename, dirname } from "node:path";
 import { parseArgs } from "node:util";
 import { ReportGenerator } from "lighthouse/report/generator/report-generator.js";
 import { runAudit, type Progress, type PsiRequest } from "./audit.ts";
@@ -43,6 +43,7 @@ try {
     psi,
     writeSheets: createWorkbookWriter(workbookPath(process.env)),
     rawDir: rawResultsPath(process.env),
+    workbookDir: dirname(workbookPath(process.env)),
     onProgress,
     onRunDir: (d) => { runDir = d; },
     renderReport: (lhr) => ReportGenerator.generateReportHtml(lhr),

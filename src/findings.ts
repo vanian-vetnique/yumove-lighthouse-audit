@@ -11,12 +11,13 @@ export type Finding = {
   about: string;
   learnMore: string | null;
   offenders: string | null;
+  report: string; // link target for the raw report, relative to the workbook
   key: number; // largest metric saving in ms, for ranking
 };
 
-export const FINDINGS_HEADERS = ["Page", "Strategy", "Category", "Insight", "Est. savings", "Metrics affected", "About", "Learn more", "Offenders"];
+export const FINDINGS_HEADERS = ["Page", "Strategy", "Category", "Insight", "Est. savings", "Metrics affected", "About", "Learn more", "Offenders", "Raw result"];
 export const FINDINGS_COLUMNS: Column[] = [
-  { width: 24 }, { width: 14, align: "center" }, { width: 18 }, { width: 34 }, { width: 22 }, { width: 24, align: "center" }, { width: 60 }, { width: 14, align: "center" }, { width: 70 },
+  { width: 24 }, { width: 14, align: "center" }, { width: 18 }, { width: 34 }, { width: 22 }, { width: 24, align: "center" }, { width: 60 }, { width: 14, align: "center" }, { width: 70 }, { width: 16, align: "center" },
 ];
 
 export const SUMMARY_HEADERS = ["Category", "Runs affected", "Largest saving", "Insight", "Est. savings", "Metrics affected", "About", "Learn more"];
@@ -46,7 +47,7 @@ const rankKey = (savings: Record<string, number> | undefined) =>
   Math.max(0, ...Object.entries(savings ?? {}).filter(([k]) => k !== "CLS").map(([, v]) => v));
 
 /** Failing insights (Performance) and failing audits (other categories) for one run, in report order. */
-export function findingsOf(page: string, pageUrl: string, strategy: Strategy, lhr: any): Finding[] {
+export function findingsOf(page: string, pageUrl: string, strategy: Strategy, lhr: any, report: string): Finding[] {
   const out: Finding[] = [];
   for (const cat of CATEGORY_ORDER) {
     const category = lhr.categories?.[cat];
@@ -66,6 +67,7 @@ export function findingsOf(page: string, pageUrl: string, strategy: Strategy, lh
         about: plain(a.description ?? ""),
         learnMore: (a.description ?? "").match(LINK)?.[2] ?? null,
         offenders: offendersText(a.details, new URL(pageUrl).hostname),
+        report,
         key: rankKey(a.metricSavings),
       });
     }
@@ -79,6 +81,7 @@ export const findingRow = (f: Finding): Cell[] => [
   f.page, f.strategy, f.category, f.title, f.savings, f.metrics, f.about,
   link(f.learnMore),
   f.offenders,
+  { text: "Open report", hyperlink: f.report },
 ];
 
 // ---- Offenders: the things causing an insight, rendered from the insight's own details ----

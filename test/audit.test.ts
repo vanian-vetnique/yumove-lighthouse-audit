@@ -223,6 +223,18 @@ async function findingsFor(l: any, text = homeOnly) {
   return { sheets, findings: sheets[1].tables.find((t) => t.title === "Findings")! };
 }
 
+test("each findings row links to its own raw report, relative to the workbook folder", async () => {
+  const root = mkdtempSync(join(tmpdir(), "wb-"));
+  const sheets: Sheet[] = [];
+  await runAudit({ fixtureText: homeOnly, fixtureName: "f", psi: async () => ({ lighthouseResult: lhr() }), writeSheets: async (s) => void sheets.push(...s), rawDir: join(root, "raw-results"), workbookDir: root, renderReport: () => "<html></html>", sleep: async () => {}, now: new Date(2026, 10, 13, 9, 5, 7) });
+  const rows = asObjects(sheets[1].tables.find((t) => t.title === "Findings")!);
+  const mobile = rows.find((r) => r.Strategy === "mobile")!["Raw result"];
+  const desktop = rows.find((r) => r.Strategy === "desktop")!["Raw result"];
+  assert.deepEqual(mobile, { text: "Open report", hyperlink: "raw-results/2026-11-13_09.05.07/01-Home-mobile.html" });
+  assert.equal((desktop as any).hyperlink, "raw-results/2026-11-13_09.05.07/01-Home-desktop.html");
+  assert.ok(readdirSync(join(root, "raw-results/2026-11-13_09.05.07")).includes("01-Home-mobile.html"));
+});
+
 test("each run writes the run tab plus '<run> findings'; the run tab has no findings table", async () => {
   const { sheets } = await findingsFor(lhr());
   assert.deepEqual(sheets.map((s) => s.name), ["2026-11-13 09.05.07", "2026-11-13 09.05.07 findings"]);
@@ -284,7 +296,7 @@ const offenders = (rows: ReturnType<typeof asObjects>, insight: string) => rows.
 
 test("offenders: grouped by 1st/3rd party host, URLs shortened, values labelled and formatted", async () => {
   const { findings } = await findingsFor(lhr());
-  assert.equal(findings.headers.at(-1), "Offenders");
+  assert.equal(findings.headers.at(-2), "Offenders");
   assert.equal(offenders(asObjects(findings), "Render-blocking requests"), [
     "yumove.co.uk (1st party)",
     "  …/assets/ym.main.css?v=9202544… · Transfer Size: 63.6 KiB · Duration: 946 ms",
