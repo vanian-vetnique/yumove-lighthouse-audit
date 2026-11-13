@@ -41,7 +41,7 @@ try {
     fixtureText: readFileSync(values.fixture!, "utf8"),
     fixtureName: basename(values.fixture!),
     psi,
-    writeSheet: createWorkbookWriter(workbookPath(process.env)),
+    writeSheets: createWorkbookWriter(workbookPath(process.env)),
     rawDir: rawResultsPath(process.env),
     onProgress,
     onRunDir: (d) => { runDir = d; },

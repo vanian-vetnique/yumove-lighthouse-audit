@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import { runAudit, type PsiRequest, type Sheet, type Progress } from "../src/audit.ts";
 
 const fixture = JSON.stringify([
@@ -49,7 +50,7 @@ function setup(psi: PsiRequest, text = fixture) {
   const sheets: Sheet[] = [];
   const rawDir = mkdtempSync(join(tmpdir(), "raw-"));
   const run = () =>
-    runAudit({ fixtureText: text, fixtureName: "urls.json", psi, writeSheet: async (s) => void sheets.push(s), rawDir, renderReport: () => "<html></html>", sleep: async () => {}, now: new Date(2026, 10, 13, 9, 5, 7) });
+    runAudit({ fixtureText: text, fixtureName: "urls.json", psi, writeSheets: async (s) => void sheets.push(...s), rawDir, renderReport: () => "<html></html>", sleep: async () => {}, now: new Date(2026, 10, 13, 9, 5, 7) });
   return { sheets, rawDir, run };
 }
 
@@ -90,7 +91,7 @@ test("sheet has valid unique-ish name, details, Mobile/Desktop in fixture order"
   assert.deepEqual(s.details.map((d) => d[0]), ["Run time", "Lighthouse version", "Fixture file"]);
   assert.equal(s.details[1][1], "12.1.0");
   assert.equal(s.details[2][1], "urls.json");
-  assert.deepEqual(s.tables.map((t) => t.title), ["Mobile", "Desktop", "Findings"]);
+  assert.deepEqual(s.tables.map((t) => t.title), ["Mobile", "Desktop"]);
   assert.deepEqual(s.tables[0].rows.map((r) => r[0]), ["Home", "PDP – A"]);
 });
 
@@ -110,26 +111,6 @@ test("blank field cells when no page-level data, including origin fallback", asy
   }
 });
 
-test("findings: scored audits below 0.9 only, all categories, both strategies", async () => {
-  const { run, sheets } = setup(async () => resp());
-  await run();
-  const f = sheets[0].tables[2].rows;
-  assert.deepEqual(f.filter((r) => r[0] === "Home" && r[1] === "mobile").map((r) => [r[2], r[3], r[4], r[5]]), [
-    ["Performance", "LCP", 0.4, "4.1 s"],
-    ["Performance", "Just under", 0.89, null],
-    ["Accessibility", "Alt text", 0, null],
-    ["Best Practices", "HTTPS", 0.2, null],
-  ]);
-  assert.equal(f.filter((r) => r[1] === "desktop").length, 8);
-  assert.equal(sheets[0].tables[2].filter, true);
-});
-
-test("score colour columns are declared on Mobile/Desktop only", async () => {
-  const { run, sheets } = setup(async () => resp());
-  await run();
-  assert.deepEqual(sheets[0].tables.map((t) => t.scoreColumns), [[3, 4, 5, 6], [3, 4, 5, 6], undefined]);
-});
-
 test("429/5xx retried up to 3 times with backoff; other 4xx not retried", async () => {
   const delays: number[] = [];
   const n = { mobile: 0, desktop: 0 };
@@ -138,7 +119,7 @@ test("429/5xx retried up to 3 times with backoff; other 4xx not retried", async 
     return resp();
   };
   const a = setup(flaky, JSON.stringify([{ label: "A", type: "x", url: "https://a.com" }]));
-  const r = await runAudit({ fixtureText: JSON.stringify([{ label: "A", type: "x", url: "https://a.com" }]), fixtureName: "f", psi: flaky, writeSheet: async () => {}, rawDir: a.rawDir, renderReport: () => "<html></html>", sleep: async (ms) => void delays.push(ms) });
+  const r = await runAudit({ fixtureText: JSON.stringify([{ label: "A", type: "x", url: "https://a.com" }]), fixtureName: "f", psi: flaky, writeSheets: async () => {}, rawDir: a.rawDir, renderReport: () => "<html></html>", sleep: async (ms) => void delays.push(ms) });
   assert.equal(r.failed, 0);
   assert.deepEqual(delays.sort((a, b) => a - b), [1000, 1000, 2000, 2000, 4000, 4000]);
 
@@ -172,14 +153,6 @@ test("a 200 response carrying a Lighthouse runtimeError counts as a failure", as
   assert.match(String(sheets[0].tables[0].rows[0][13]), /page failed/);
 });
 
-test("metricSavings audits below 0.9 are findings", async () => {
-  const r = resp();
-  r.lighthouseResult.audits.ok.scoreDisplayMode = "metricSavings";
-  const { run, sheets } = setup(async () => r);
-  await run();
-  assert.ok(sheets[0].tables[2].rows.some((x) => x[3] === "Just under"));
-});
-
 test("never more than 3 calls in flight", async () => {
   const many = JSON.stringify(Array.from({ length: 6 }, (_, i) => ({ label: `L${i}`, type: "x", url: `https://a.com/${i}` })));
   let live = 0, peak = 0;
@@ -198,7 +171,7 @@ const one = JSON.stringify([{ label: "A", type: "x", url: "https://a.com" }]);
 test("progress: start then done per call, with position, strategy, label, url and duration", async () => {
   const events: Progress[] = [];
   const { rawDir } = setup(async () => resp());
-  await runAudit({ fixtureText: fixture, fixtureName: "f", psi: async () => resp(), writeSheet: async () => {}, rawDir, renderReport: () => "<html></html>", sleep: async () => {}, onProgress: (e) => void events.push(e) });
+  await runAudit({ fixtureText: fixture, fixtureName: "f", psi: async () => resp(), writeSheets: async () => {}, rawDir, renderReport: () => "<html></html>", sleep: async () => {}, onProgress: (e) => void events.push(e) });
   const mobileHome = events.filter((e) => e.strategy === "mobile" && e.label === "Home");
   assert.deepEqual(mobileHome.map((e) => e.type), ["start", "done"]);
   assert.equal(mobileHome[0].index, 1);
@@ -218,7 +191,7 @@ test("progress: failures report the message; retries report the attempt number",
     return resp();
   };
   const { rawDir } = setup(psi, one);
-  await runAudit({ fixtureText: one, fixtureName: "f", psi, writeSheet: async () => {}, rawDir, renderReport: () => "<html></html>", sleep: async () => {}, onProgress: (e) => void events.push(e) });
+  await runAudit({ fixtureText: one, fixtureName: "f", psi, writeSheets: async () => {}, rawDir, renderReport: () => "<html></html>", sleep: async () => {}, onProgress: (e) => void events.push(e) });
   const m = events.filter((e) => e.strategy === "mobile");
   assert.deepEqual(m.map((e) => e.type), ["start", "retry", "done"]);
   assert.equal((m[1] as any).attempt, 2);
@@ -234,8 +207,74 @@ test("unwritable raw folder fails before any PSI call, naming the path", async (
   const rawDir = join(blocker, "sub"); // parent is a file, so it can't be created
   let calls = 0;
   await assert.rejects(
-    runAudit({ fixtureText: one, fixtureName: "f", psi: async () => (calls++, resp()), writeSheet: async () => {}, rawDir, renderReport: () => "", sleep: async () => {} }),
+    runAudit({ fixtureText: one, fixtureName: "f", psi: async () => (calls++, resp()), writeSheets: async () => {}, rawDir, renderReport: () => "", sleep: async () => {} }),
     (e: Error) => e.message.includes(rawDir),
   );
   assert.equal(calls, 0);
+});
+
+// ---- Findings: failing insights on a second tab (real Lighthouse 13 data, trimmed) ----
+const lhr = () => JSON.parse(readFileSync(new URL("./fixtures/lhr-insights.json", import.meta.url), "utf8"));
+const homeOnly = JSON.stringify([{ label: "Home", type: "home", url: "https://yumove.co.uk/" }]);
+const asObjects = (t: Sheet["tables"][number]) => t.rows.map((r) => Object.fromEntries(t.headers.map((h, i) => [h, r[i]])));
+async function findingsFor(l: any, text = homeOnly) {
+  const { run, sheets } = setup(async () => ({ lighthouseResult: l }), text);
+  await run();
+  return { sheets, findings: sheets[1].tables.find((t) => t.title === "Findings")! };
+}
+
+test("each run writes the run tab plus '<run> findings'; the run tab has no findings table", async () => {
+  const { sheets } = await findingsFor(lhr());
+  assert.deepEqual(sheets.map((s) => s.name), ["2026-11-13 09.05.07", "2026-11-13 09.05.07 findings"]);
+  assert.deepEqual(sheets[0].tables.map((t) => t.title), ["Mobile", "Desktop"]);
+  assert.ok(sheets[1].name.length <= 31);
+});
+
+test("performance findings are failing insights only: no passing, informative or legacy audits", async () => {
+  const l = lhr();
+  l.audits["dom-size-insight"].score = 0.2;
+  l.audits["dom-size-insight"].scoreDisplayMode = "informative";
+  const { findings } = await findingsFor(l);
+  const perf = asObjects(findings).filter((r) => r.Strategy === "mobile" && r.Category === "Performance");
+  // render-blocking first (largest saving), then the rest in Lighthouse order
+  assert.deepEqual(perf.map((r) => r.Insight), [
+    "Render-blocking requests", "Use efficient cache lifetimes", "Forced reflow", "LCP request discovery", "Legacy JavaScript", "Network dependency tree",
+  ]);
+});
+
+test("insight row: page, savings text, metrics affected, plain About and docs link", async () => {
+  const { findings } = await findingsFor(lhr());
+  assert.deepEqual(findings.headers.slice(0, 8), ["Page", "Strategy", "Category", "Insight", "Est. savings", "Metrics affected", "About", "Learn more"]);
+  const rb = asObjects(findings).find((r) => r.Insight === "Render-blocking requests" && r.Strategy === "mobile")!;
+  assert.equal(rb.Page, "Home");
+  assert.equal(rb.Category, "Performance");
+  assert.equal(rb["Est. savings"], "Est savings of 860 ms");
+  assert.equal(rb["Metrics affected"], "FCP -850 ms");
+  assert.equal(rb.About, "Requests are blocking the page’s initial render, which may delay LCP. Deferring or inlining can move these network requests out of the critical path.");
+  assert.deepEqual(rb["Learn more"], { text: "Learn more", hyperlink: "https://developer.chrome.com/docs/performance/insights/render-blocking" });
+  const fr = asObjects(findings).find((r) => r.Insight === "Forced reflow")!;
+  assert.equal(fr["Est. savings"], "-");
+  assert.equal(fr["Metrics affected"], "-");
+});
+
+test("insights are ranked by their largest metric saving; unsaved ones keep Lighthouse order", async () => {
+  const l = lhr();
+  l.audits["cache-insight"].metricSavings = { LCP: 1200, FCP: 0 };
+  const { findings } = await findingsFor(l);
+  const order = asObjects(findings).filter((r) => r.Strategy === "mobile").map((r) => r.Insight);
+  assert.deepEqual(order.slice(0, 2), ["Use efficient cache lifetimes", "Render-blocking requests"]);
+  assert.equal(asObjects(findings).find((r) => r.Insight === "Use efficient cache lifetimes")!["Metrics affected"], "LCP -1,200 ms");
+});
+
+test("findings are ordered by page, then strategy; a failed run contributes none and does not break the tab", async () => {
+  const two = JSON.stringify([{ label: "B", type: "x", url: "https://yumove.co.uk/b" }, { label: "A", type: "x", url: "https://yumove.co.uk/a" }]);
+  const { run, sheets } = setup(async ({ url, strategy }) => {
+    if (url.endsWith("/a") && strategy === "desktop") throw Object.assign(new Error("PSI 400: bad"), { status: 400 });
+    return { lighthouseResult: lhr() };
+  }, two);
+  const { failed } = await run();
+  assert.equal(failed, 1);
+  const rows = asObjects(sheets[1].tables.find((t) => t.title === "Findings")!);
+  const seq = [...new Set(rows.map((r) => `${r.Page}/${r.Strategy}`))];
+  assert.deepEqual(seq, ["B/mobile", "B/desktop", "A/mobile"]);
 });

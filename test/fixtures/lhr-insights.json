@@ -1,0 +1,851 @@
+{
+ "lighthouseVersion": "13.6.0",
+ "finalDisplayedUrl": "https://yumove.co.uk/products/yumove-joint-care-plus-max-strength-for-dogs",
+ "categories": {
+  "performance": {
+   "title": "Performance",
+   "score": 0.66,
+   "auditRefs": [
+    {
+     "id": "cache-insight",
+     "group": "insights"
+    },
+    {
+     "id": "dom-size-insight",
+     "group": "insights"
+    },
+    {
+     "id": "forced-reflow-insight",
+     "group": "insights"
+    },
+    {
+     "id": "lcp-discovery-insight",
+     "group": "insights"
+    },
+    {
+     "id": "legacy-javascript-insight",
+     "group": "insights"
+    },
+    {
+     "id": "network-dependency-tree-insight",
+     "group": "insights"
+    },
+    {
+     "id": "render-blocking-insight",
+     "group": "insights"
+    },
+    {
+     "id": "viewport-insight",
+     "group": "insights"
+    },
+    {
+     "id": "unused-javascript",
+     "group": "diagnostics"
+    }
+   ]
+  },
+  "accessibility": {
+   "title": "Accessibility",
+   "score": 0.9,
+   "auditRefs": [
+    {
+     "id": "color-contrast",
+     "group": "a11y-color-contrast"
+    },
+    {
+     "id": "image-alt",
+     "group": "a11y-names-labels"
+    }
+   ]
+  },
+  "best-practices": {
+   "title": "Best Practices",
+   "score": 0.96,
+   "auditRefs": [
+    {
+     "id": "is-on-https",
+     "group": "best-practices-trust-safety"
+    },
+    {
+     "id": "errors-in-console",
+     "group": "best-practices-general"
+    }
+   ]
+  },
+  "seo": {
+   "title": "SEO",
+   "score": 1,
+   "auditRefs": [
+    {
+     "id": "document-title",
+     "group": "seo-content"
+    }
+   ]
+  }
+ },
+ "audits": {
+  "cache-insight": {
+   "id": "cache-insight",
+   "title": "Use efficient cache lifetimes",
+   "description": "A long cache lifetime can speed up repeat visits to your page. [Learn more about caching](https://developer.chrome.com/docs/performance/insights/cache).",
+   "score": 0.5,
+   "scoreDisplayMode": "metricSavings",
+   "displayValue": "Est savings of 313 KiB",
+   "metricSavings": {
+    "LCP": 0,
+    "FCP": 0
+   },
+   "details": {
+    "debugData": {
+     "type": "debugdata",
+     "wastedBytes": 320140.25979166676
+    },
+    "sortedBy": [
+     "wastedBytes"
+    ],
+    "type": "table",
+    "skipSumming": [
+     "cacheLifetimeMs"
+    ],
+    "headings": [
+     {
+      "valueType": "url",
+      "label": "Request",
+      "key": "url"
+     },
+     {
+      "label": "Cache TTL",
+      "displayUnit": "duration",
+      "key": "cacheLifetimeMs",
+      "valueType": "ms"
+     },
+     {
+      "valueType": "bytes",
+      "displayUnit": "kb",
+      "key": "totalBytes",
+      "granularity": 1,
+      "label": "Transfer Size"
+     }
+    ],
+    "items": [
+     {
+      "cacheLifetimeMs": 773000,
+      "url": "https://consent.cookiebot.com/Framework/IAB/consent-sdk-2.3.js",
+      "totalBytes": 90138,
+      "wastedBytes": 80958.32104166667
+     },
+     {
+      "wastedBytes": 55375.856250000004,
+      "url": "https://static.ordergroove.com/01219f509b5311ee9e7c3a583f4be6a0/main.js",
+      "cacheLifetimeMs": 900000,
+      "totalBytes": 61959
+     },
+     {
+      "wastedBytes": 49421.600000000006,
+      "url": "https://uk2-api.eng.bloomreach.com/js/brweb.min.js",
+      "totalBytes": 61777,
+      "cacheLifetimeMs": 3600000
+     }
+    ]
+   },
+   "numericValue": 320140.25979166676,
+   "numericUnit": "byte"
+  },
+  "dom-size-insight": {
+   "id": "dom-size-insight",
+   "title": "Optimize DOM size",
+   "description": "A large DOM can increase the duration of style calculations and layout reflows, impacting page responsiveness. A large DOM will also increase memory usage. [Learn how to avoid an excessive DOM size](https://developer.chrome.com/docs/performance/insights/dom-size).",
+   "score": 1,
+   "scoreDisplayMode": "numeric",
+   "metricSavings": {
+    "INP": 0
+   },
+   "details": {
+    "debugData": {
+     "maxChildren": 31,
+     "type": "debugdata",
+     "maxDepth": 22,
+     "totalElements": 5273
+    },
+    "headings": [
+     {
+      "valueType": "text",
+      "key": "statistic",
+      "label": "Statistic"
+     },
+     {
+      "key": "node",
+      "valueType": "node",
+      "label": "Element"
+     },
+     {
+      "valueType": "numeric",
+      "label": "Value",
+      "key": "value"
+     }
+    ],
+    "type": "table",
+    "items": [
+     {
+      "statistic": "Total elements",
+      "value": {
+       "value": 5273,
+       "granularity": 1,
+       "type": "numeric"
+      }
+     },
+     {
+      "value": {
+       "granularity": 1,
+       "value": 22,
+       "type": "numeric"
+      },
+      "statistic": "DOM depth",
+      "node": {
+       "nodeLabel": "Maximum Storage Duration",
+       "selector": "div.CybotCookiebotDialogDetailBodyContentCookieInfo > div.CybotCookiebotDialogDetailBodyContentCookieInfoFooter > span.CybotCookiebotDialogDetailBodyContentCookieInfoFooterContent > b",
+       "snippet": "<b>",
+       "type": "node"
+      }
+     },
+     {
+      "node": {
+       "snippet": "<body class=\"tw:group/body gradient template-product.dog-joint-tablets\" data-template-prefix=\"product\" data-template-suffix=\"dog-joint-tablets\" data-cookiebot=\"\" data-searchanise-enabled=\"true\" data-segment=\"new-user\" style=\"padding-top: 0px;\">",
+       "nodeLabel": "body.tw:group/body",
+       "selector": "body.tw:group/body",
+       "type": "node"
+      },
+      "value": {
+       "type": "numeric",
+       "granularity": 1,
+       "value": 31
+      },
+      "statistic": "Most children"
+     }
+    ]
+   },
+   "numericValue": 5273,
+   "numericUnit": "element"
+  },
+  "forced-reflow-insight": {
+   "id": "forced-reflow-insight",
+   "title": "Forced reflow",
+   "description": "A forced reflow occurs when JavaScript queries geometric properties (such as `offsetWidth`) after styles have been invalidated by a change to the DOM state. This can result in poor performance. Learn more about [forced reflows](https://developer.chrome.com/docs/performance/insights/forced-reflow) and possible mitigations.",
+   "score": 0,
+   "scoreDisplayMode": "numeric",
+   "details": {
+    "items": [
+     {
+      "headings": [
+       {
+        "label": "Top function call",
+        "valueType": "source-location",
+        "key": "source"
+       },
+       {
+        "granularity": 1,
+        "label": "Total reflow time",
+        "valueType": "ms",
+        "key": "reflowTime"
+       }
+      ],
+      "items": [
+       {
+        "reflowTime": 61.569,
+        "source": {
+         "line": 14,
+         "url": "https://yumove.co.uk/cdn/shop/t/4674/assets/ym.main.js?v=95815651783061297871794407121",
+         "type": "source-location",
+         "column": 174151
+        }
+       }
+      ],
+      "type": "table"
+     },
+     {
+      "items": [
+       {
+        "reflowTime": 1.217,
+        "source": {
+         "column": 86447,
+         "line": 13,
+         "url": "https://yumove.co.uk/cdn/shop/t/4674/assets/ym.main.js?v=95815651783061297871794407121",
+         "type": "source-location"
+        }
+       },
+       {
+        "reflowTime": 2.057,
+        "source": {
+         "type": "source-location",
+         "column": 1881,
+         "url": "https://yumove.co.uk/cdn/shop/t/4674/assets/ym.main.js?v=95815651783061297871794407121",
+         "line": 171
+        }
+       }
+      ],
+      "headings": [
+       {
+        "valueType": "source-location",
+        "key": "source",
+        "label": "Source"
+       },
+       {
+        "granularity": 1,
+        "label": "Total reflow time",
+        "valueType": "ms",
+        "key": "reflowTime"
+       }
+      ],
+      "type": "table"
+     }
+    ],
+    "type": "list"
+   }
+  },
+  "lcp-discovery-insight": {
+   "id": "lcp-discovery-insight",
+   "title": "LCP request discovery",
+   "description": "[Optimize LCP](https://developer.chrome.com/docs/performance/insights/lcp-discovery) by making the LCP image discoverable from the HTML immediately, and avoiding lazy-loading",
+   "score": 0,
+   "scoreDisplayMode": "numeric",
+   "metricSavings": {
+    "LCP": 0
+   },
+   "details": {
+    "type": "list",
+    "items": [
+     {
+      "items": {
+       "priorityHinted": {
+        "value": false,
+        "label": "fetchpriority=high should be applied to the image preload request"
+       },
+       "requestDiscoverable": {
+        "label": "Request is discoverable in initial document",
+        "value": true
+       },
+       "eagerlyLoaded": {
+        "label": "LCP resources shouldn’t use loading=lazy",
+        "value": true
+       }
+      },
+      "type": "checklist"
+     },
+     {
+      "selector": "ul#product-gallery-template--25131027333496__main-product-list > li#product-gallery-template--25131027333496__main-product-slide01 > div.tw:my-0 > img.aspect-auto",
+      "nodeLabel": "YuMOVE Joint Support Plus Max product packaging for dogs on a light beige backg…",
+      "type": "node",
+      "snippet": "<img src=\"//yumove.co.uk/cdn/shop/files/Joint_Care_PLUS_Max_Strength.webp?v=17722078…\" alt=\"YuMOVE Joint Support Plus Max product packaging for dogs on a light beige …\" srcset=\"//yumove.co.uk/cdn/shop/files/Joint_Care_PLUS_Max_Strength.webp?v=17722078…\" width=\"640\" height=\"640\" loading=\"eager\" class=\"aspect-auto h-auto w-full object-cover product_image tw:h-full tw:md:w-ful…\" fetchpriority=\"high\" decoding=\"auto\" sizes=\"((min-width: 10em) and (max-width: 20em)) 10em,((min-width: 30em) and (max…\" data-component=\"\" data-id=\"\">"
+     }
+    ]
+   },
+   "numericValue": 0,
+   "numericUnit": "millisecond"
+  },
+  "legacy-javascript-insight": {
+   "id": "legacy-javascript-insight",
+   "title": "Legacy JavaScript",
+   "description": "Polyfills and transforms enable older browsers to use new JavaScript features. However, many aren’t necessary for modern browsers. Consider modifying your JavaScript build process to not transpile [Baseline](https://web.dev/articles/baseline-and-polyfills) features, unless you know you must support older browsers. [Learn why most sites can deploy ES6+ code without transpiling](https://developer.chrome.com/docs/performance/insights/legacy-javascript).",
+   "score": 0.5,
+   "scoreDisplayMode": "metricSavings",
+   "displayValue": "Est savings of 10 KiB",
+   "metricSavings": {
+    "LCP": 0,
+    "FCP": 0
+   },
+   "details": {
+    "debugData": {
+     "type": "debugdata",
+     "wastedBytes": 10193
+    },
+    "type": "table",
+    "headings": [
+     {
+      "label": "URL",
+      "valueType": "url",
+      "subItemsHeading": {
+       "valueType": "source-location",
+       "key": "location"
+      },
+      "key": "url"
+     },
+     {
+      "key": null,
+      "valueType": "code",
+      "subItemsHeading": {
+       "key": "signal"
+      }
+     },
+     {
+      "label": "Wasted bytes",
+      "key": "wastedBytes",
+      "valueType": "bytes"
+     }
+    ],
+    "items": [
+     {
+      "url": "https://searchanise-ef84.kxcdn.com/widgets.39510.min.js",
+      "wastedBytes": 10193,
+      "subItems": {
+       "type": "subitems",
+       "items": [
+        {
+         "signal": "@babel/plugin-transform-spread",
+         "location": {
+          "line": 0,
+          "column": 217196,
+          "type": "source-location",
+          "url": "https://searchanise-ef84.kxcdn.com/widgets.39510.min.js"
+         }
+        },
+        {
+         "location": {
+          "column": 273433,
+          "type": "source-location",
+          "url": "https://searchanise-ef84.kxcdn.com/widgets.39510.min.js",
+          "line": 0
+         },
+         "signal": "Math.log10"
+        }
+       ]
+      }
+     }
+    ]
+   },
+   "numericValue": 10193,
+   "numericUnit": "byte"
+  },
+  "network-dependency-tree-insight": {
+   "id": "network-dependency-tree-insight",
+   "title": "Network dependency tree",
+   "description": "[Avoid chaining critical requests](https://developer.chrome.com/docs/performance/insights/network-dependency-tree) by reducing the length of chains, reducing the download size of resources, or deferring the download of unnecessary resources to improve page load",
+   "score": 0,
+   "scoreDisplayMode": "numeric",
+   "metricSavings": {
+    "LCP": 0
+   },
+   "details": {
+    "type": "list",
+    "items": [
+     {
+      "type": "list-section",
+      "value": {
+       "type": "network-tree"
+      }
+     }
+    ]
+   },
+   "warnings": [
+    "More than 4 `preconnect` connections were found. These should be used sparingly and only to the most important origins."
+   ]
+  },
+  "render-blocking-insight": {
+   "id": "render-blocking-insight",
+   "title": "Render-blocking requests",
+   "description": "Requests are blocking the page’s initial render, which may delay LCP. [Deferring or inlining](https://developer.chrome.com/docs/performance/insights/render-blocking) can move these network requests out of the critical path.",
+   "score": 0,
+   "scoreDisplayMode": "metricSavings",
+   "displayValue": "Est savings of 860 ms",
+   "metricSavings": {
+    "LCP": 0,
+    "FCP": 850
+   },
+   "details": {
+    "items": [
+     {
+      "totalBytes": 65109,
+      "url": "https://yumove.co.uk/cdn/shop/t/4674/assets/ym.main.css?v=92025442227312874971794407120",
+      "wastedMs": 946
+     },
+     {
+      "totalBytes": 2877,
+      "wastedMs": 474,
+      "url": "https://yumove.co.uk/cdn/shopifycloud/portable-wallets/latest/accelerated-checkout-backwards-compat.css"
+     },
+     {
+      "totalBytes": 0,
+      "url": "https://cdn.intelligems.io/esm/c4291048ec8a/bundle.js",
+      "wastedMs": 780
+     }
+    ],
+    "headings": [
+     {
+      "key": "url",
+      "valueType": "url",
+      "label": "URL"
+     },
+     {
+      "key": "totalBytes",
+      "label": "Transfer Size",
+      "valueType": "bytes"
+     },
+     {
+      "valueType": "timespanMs",
+      "key": "wastedMs",
+      "label": "Duration"
+     }
+    ],
+    "type": "table"
+   },
+   "numericValue": 858,
+   "numericUnit": "millisecond"
+  },
+  "viewport-insight": {
+   "id": "viewport-insight",
+   "title": "Optimize viewport for mobile",
+   "description": "Tap interactions may be [delayed by up to 300 ms](https://developer.chrome.com/docs/performance/insights/viewport) if the viewport isn’t optimized for mobile",
+   "score": 1,
+   "scoreDisplayMode": "numeric",
+   "metricSavings": {
+    "INP": 0
+   },
+   "details": {
+    "items": [
+     {
+      "node": {
+       "nodeLabel": "head > meta",
+       "type": "node",
+       "selector": "head > meta",
+       "snippet": "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+      }
+     }
+    ],
+    "type": "table",
+    "headings": [
+     {
+      "key": "node",
+      "valueType": "node"
+     }
+    ]
+   },
+   "numericValue": 0,
+   "numericUnit": "millisecond"
+  },
+  "unused-javascript": {
+   "id": "unused-javascript",
+   "title": "Reduce unused JavaScript",
+   "description": "Reduce unused JavaScript and defer loading scripts until they are required to decrease bytes consumed by network activity. [Learn how to reduce unused JavaScript](https://developer.chrome.com/docs/lighthouse/performance/unused-javascript/).",
+   "score": 0.5,
+   "scoreDisplayMode": "metricSavings",
+   "displayValue": "Est savings of 588 KiB",
+   "metricSavings": {
+    "LCP": 0,
+    "FCP": 0
+   },
+   "details": {
+    "type": "opportunity",
+    "items": [
+     {
+      "wastedPercent": 86.46067907932348,
+      "url": "https://yumove.co.uk/cdn/shop/t/4674/assets/ym.main.js?v=95815651783061297871794407121",
+      "subItems": {
+       "type": "subitems",
+       "items": [
+        {
+         "source": "…",
+         "sourceBytes": 231981,
+         "sourceWastedBytes": 200590
+        }
+       ]
+      },
+      "wastedBytes": 200590,
+      "totalBytes": 232002
+     },
+     {
+      "url": "https://www.googletagmanager.com/gtag/destination?id=G-XVNCD94RN7&cx=c&gtm=4e6bb1",
+      "wastedBytes": 75202,
+      "totalBytes": 181727,
+      "wastedPercent": 41.38187043467848
+     },
+     {
+      "wastedBytes": 68694,
+      "wastedPercent": 38.9866722622182,
+      "totalBytes": 176198,
+      "url": "https://sst.yumove.co.uk/aolzjzvpz/2uyk?ac259f34=L2d0YWcvanM%2FaWQ9Ry1YMUNaMlFWUUNUJmN4PWMmZ3RtPTRlNmJiMQ%3D%3D"
+     },
+     {
+      "wastedPercent": 73.26892890679954,
+      "url": "https://consent.cookiebot.com/Framework/IAB/consent-sdk-2.3.js",
+      "wastedBytes": 65624,
+      "totalBytes": 89566
+     },
+     {
+      "wastedBytes": 55102,
+      "totalBytes": 218163,
+      "wastedPercent": 25.257130825871577,
+      "url": "https://sst.yumove.co.uk/aolzjzvpz.js?aulq=ExRLPT43QT8uRD05MCJKGUdCWEtMHgJSAwUbFRwfQgwVXgMR"
+     },
+     {
+      "wastedPercent": 67.56541271811824,
+      "url": "https://searchanise-ef84.kxcdn.com/widgets.39510.min.js",
+      "wastedBytes": 49296,
+      "totalBytes": 72960
+     },
+     {
+      "wastedBytes": 36367,
+      "url": "https://static.ordergroove.com/01219f509b5311ee9e7c3a583f4be6a0/main.js",
+      "wastedPercent": 59.21351526965562,
+      "totalBytes": 61417
+     },
+     {
+      "totalBytes": 61272,
+      "wastedBytes": 27790,
+      "wastedPercent": 45.355618406029855,
+      "url": "https://uk2-api.eng.bloomreach.com/js/brweb.min.js"
+     },
+     {
+      "wastedBytes": 23462,
+      "url": "https://consent.cookiebot.com/uc.js",
+      "wastedPercent": 62.498657923208434,
+      "totalBytes": 37540
+     }
+    ],
+    "headings": [
+     {
+      "valueType": "url",
+      "label": "URL",
+      "key": "url",
+      "subItemsHeading": {
+       "key": "source",
+       "valueType": "code"
+      }
+     },
+     {
+      "label": "Transfer Size",
+      "subItemsHeading": {
+       "key": "sourceBytes"
+      },
+      "valueType": "bytes",
+      "key": "totalBytes"
+     },
+     {
+      "key": "wastedBytes",
+      "subItemsHeading": {
+       "key": "sourceWastedBytes"
+      },
+      "label": "Est Savings",
+      "valueType": "bytes"
+     }
+    ],
+    "sortedBy": [
+     "wastedBytes"
+    ],
+    "overallSavingsMs": 0,
+    "overallSavingsBytes": 602127,
+    "debugData": {
+     "metricSavings": {
+      "LCP": 0,
+      "FCP": 0
+     },
+     "type": "debugdata"
+    }
+   },
+   "numericValue": 0,
+   "numericUnit": "millisecond"
+  },
+  "color-contrast": {
+   "id": "color-contrast",
+   "title": "Background and foreground colors do not have a sufficient contrast ratio.",
+   "description": "Low-contrast text is difficult or impossible for many users to read. [Learn how to provide sufficient color contrast](https://dequeuniversity.com/rules/axe/4.14/color-contrast).",
+   "score": 0,
+   "scoreDisplayMode": "binary",
+   "details": {
+    "items": [
+     {
+      "node": {
+       "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.67 (foreground color: #80a197, background color: #faf9f5, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1",
+       "nodeLabel": "our 24 partners",
+       "selector": "div.CybotCookiebotScrollContainer > div#CybotCookiebotDialogBodyContent > div#CybotCookiebotDialogBodyContentText > a#CybotCookiebotDialogBodyContentTextShowIABVendors",
+       "type": "node",
+       "snippet": "<a id=\"CybotCookiebotDialogBodyContentTextShowIABVendors\" href=\"#\">"
+      },
+      "subItems": {
+       "type": "subitems",
+       "items": [
+        {
+         "relatedNode": {
+          "type": "node",
+          "snippet": "<div id=\"CybotCookiebotDialog\" name=\"CybotCookiebotDialog\" role=\"region\" aria-labelledby=\"CybotCookiebotDialogBodyContentTitle\" tabindex=\"-1\" lang=\"en\" dir=\"ltr\" data-nosnippet=\"\" ng-non-bindable=\"\" style=\"display: flex; font-size: 0.9375rem;\" data-template=\"bottom\" class=\"CybotEdge CybotMultilevel CybotCookiebotDialogActive\">",
+          "selector": "body.tw:group/body > div#CybotCookiebotDialog",
+          "nodeLabel": "Responsible use of your data\nWe and our 24 partners process your personal data,…"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "subItems": {
+       "type": "subitems",
+       "items": [
+        {
+         "relatedNode": {
+          "type": "node",
+          "nodeLabel": "Responsible use of your data\nWe and our 24 partners process your personal data,…",
+          "snippet": "<div id=\"CybotCookiebotDialog\" name=\"CybotCookiebotDialog\" role=\"region\" aria-labelledby=\"CybotCookiebotDialogBodyContentTitle\" tabindex=\"-1\" lang=\"en\" dir=\"ltr\" data-nosnippet=\"\" ng-non-bindable=\"\" style=\"display: flex; font-size: 0.9375rem;\" data-template=\"bottom\" class=\"CybotEdge CybotMultilevel CybotCookiebotDialogActive\">",
+          "selector": "body.tw:group/body > div#CybotCookiebotDialog"
+         }
+        }
+       ]
+      },
+      "node": {
+       "selector": "div#CybotCookiebotDialogBody > div.CybotCookiebotDialogBodyBottomWrapper > div#CybotCookiebotDialogBodyEdgeMoreDetails > a#CybotCookiebotDialogBodyEdgeMoreDetailsLink",
+       "explanation": "Fix any of the following:\n  Element has insufficient color contrast of 2.67 (foreground color: #80a197, background color: #faf9f5, font size: 9.8pt (13px), font weight: normal). Expected contrast ratio of 4.5:1",
+       "nodeLabel": "Show details",
+       "type": "node",
+       "snippet": "<a id=\"CybotCookiebotDialogBodyEdgeMoreDetailsLink\" href=\"#\" class=\"\">"
+      }
+     }
+    ],
+    "headings": [
+     {
+      "label": "Failing Elements",
+      "subItemsHeading": {
+       "valueType": "node",
+       "key": "relatedNode"
+      },
+      "valueType": "node",
+      "key": "node"
+     }
+    ],
+    "type": "table",
+    "debugData": {
+     "type": "debugdata",
+     "tags": [
+      "cat.color",
+      "wcag2aa",
+      "wcag143",
+      "TTv5",
+      "TT13.c",
+      "EN-301-549",
+      "EN-9.1.4.3",
+      "ACT",
+      "RGAAv4",
+      "RGAA-3.2.1"
+     ],
+     "impact": "serious"
+    }
+   }
+  },
+  "image-alt": {
+   "id": "image-alt",
+   "title": "Image elements have `[alt]` attributes",
+   "description": "Informative elements should aim for short, descriptive alternate text. Decorative elements can be ignored with an empty alt attribute. [Learn more about the `alt` attribute](https://dequeuniversity.com/rules/axe/4.14/image-alt).",
+   "score": 1,
+   "scoreDisplayMode": "binary",
+   "details": {
+    "headings": [
+     {
+      "key": "node",
+      "label": "Failing Elements",
+      "valueType": "node",
+      "subItemsHeading": {
+       "key": "relatedNode",
+       "valueType": "node"
+      }
+     }
+    ],
+    "type": "table",
+    "items": []
+   }
+  },
+  "is-on-https": {
+   "id": "is-on-https",
+   "title": "Uses HTTPS",
+   "description": "All sites should be protected with HTTPS, even ones that don't handle sensitive data. This includes avoiding [mixed content](https://developers.google.com/web/fundamentals/security/prevent-mixed-content/what-is-mixed-content), where some resources are loaded over HTTP despite the initial request being served over HTTPS. HTTPS prevents intruders from tampering with or passively listening in on the communications between your app and your users, and is a prerequisite for HTTP/2 and many new web platform APIs. [Learn more about HTTPS](https://developer.chrome.com/docs/lighthouse/pwa/is-on-https/).",
+   "score": 1,
+   "scoreDisplayMode": "binary",
+   "details": {
+    "type": "table",
+    "headings": [
+     {
+      "valueType": "url",
+      "label": "Insecure URL",
+      "key": "url"
+     },
+     {
+      "valueType": "text",
+      "key": "resolution",
+      "label": "Request Resolution"
+     }
+    ],
+    "items": []
+   }
+  },
+  "errors-in-console": {
+   "id": "errors-in-console",
+   "title": "Browser errors were logged to the console",
+   "description": "Errors logged to the console indicate unresolved problems. They can come from network request failures and other browser concerns. [Learn more about this errors in console diagnostic audit](https://developer.chrome.com/docs/lighthouse/best-practices/errors-in-console/)",
+   "score": 0,
+   "scoreDisplayMode": "binary",
+   "details": {
+    "headings": [
+     {
+      "label": "Source",
+      "key": "sourceLocation",
+      "valueType": "source-location"
+     },
+     {
+      "label": "Description",
+      "valueType": "code",
+      "key": "description"
+     }
+    ],
+    "items": [
+     {
+      "source": "console.error",
+      "sourceLocation": {
+       "url": "https://yumove.co.uk/products/yumove-joint-care-plus-max-strength-for-dogs",
+       "type": "source-location",
+       "column": 16,
+       "line": 1034
+      },
+      "description": "[Bloomreach Unified Tracking] Shopify.analytics object is not available"
+     },
+     {
+      "description": "[Bloomreach Unified Tracking] Shopify.analytics object is not available",
+      "sourceLocation": {
+       "line": 1034,
+       "url": "https://yumove.co.uk/products/yumove-joint-care-plus-max-strength-for-dogs",
+       "type": "source-location",
+       "column": 16
+      },
+      "source": "console.error"
+     },
+     {
+      "description": "[Bloomreach Unified Tracking] Shopify.analytics object is not available",
+      "source": "console.error",
+      "sourceLocation": {
+       "type": "source-location",
+       "url": "https://yumove.co.uk/products/yumove-joint-care-plus-max-strength-for-dogs",
+       "column": 16,
+       "line": 1034
+      }
+     }
+    ],
+    "type": "table"
+   }
+  },
+  "document-title": {
+   "id": "document-title",
+   "title": "Document has a `<title>` element",
+   "description": "The title gives screen reader users an overview of the page, and search engine users rely on it heavily to determine if a page is relevant to their search. [Learn more about document titles](https://dequeuniversity.com/rules/axe/4.14/document-title).",
+   "score": 1,
+   "scoreDisplayMode": "binary",
+   "details": {
+    "headings": [
+     {
+      "subItemsHeading": {
+       "key": "relatedNode",
+       "valueType": "node"
+      },
+      "valueType": "node",
+      "key": "node",
+      "label": "Failing Elements"
+     }
+    ],
+    "type": "table",
+    "items": []
+   }
+  }
+ }
+}

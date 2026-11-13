@@ -31,8 +31,8 @@ test("raw results path: default, blank and env override", () => {
 test("creates workbook, then adds tabs without touching existing ones; names stay unique", async () => {
   const path = join(mkdtempSync(join(tmpdir(), "wb-")), "sub", "h.xlsx");
   const write = createWorkbookWriter(path);
-  await write(sheet("2026-11-13 09.05.07"));
-  await write(sheet("2026-11-13 09.05.07"));
+  await write([sheet("2026-11-13 09.05.07")]);
+  await write([sheet("2026-11-13 09.05.07")]);
   const wb = await new ExcelJS.Workbook().xlsx.readFile(path);
   assert.deepEqual(wb.worksheets.map((w) => w.name), ["2026-11-13 09.05.07", "2026-11-13 09.05.07 (2)"]);
   const ws = wb.worksheets[0];
@@ -44,7 +44,7 @@ test("creates workbook, then adds tabs without touching existing ones; names sta
 
 test("layout: blank gutter and top row, no gridlines, styled bordered headers", async () => {
   const path = join(mkdtempSync(join(tmpdir(), "wb-")), "h.xlsx");
-  await createWorkbookWriter(path)(sheet("a"));
+  await createWorkbookWriter(path)([sheet("a")]);
   const ws = (await new ExcelJS.Workbook().xlsx.readFile(path)).worksheets[0];
   assert.equal(ws.views[0].showGridLines, false);
   assert.ok(ws.getColumn(1).width! < 5);
@@ -65,7 +65,7 @@ test("layout: blank gutter and top row, no gridlines, styled bordered headers", 
 
 test("score cells carry three conditional-format bands; findings none", async () => {
   const path = join(mkdtempSync(join(tmpdir(), "wb-")), "h.xlsx");
-  await createWorkbookWriter(path)(sheet("a"));
+  await createWorkbookWriter(path)([sheet("a")]);
   const ws = (await new ExcelJS.Workbook().xlsx.readFile(path)).worksheets[0];
   const cf = (ws as any).conditionalFormattings as { ref: string; rules: { operator: string }[] }[];
   assert.equal(cf.length, 1);
@@ -77,6 +77,6 @@ test("unwritable workbook says to close it and re-run", { skip: process.getuid?.
   const dir = mkdtempSync(join(tmpdir(), "wb-"));
   mkdirSync(join(dir, "ro"));
   chmodSync(join(dir, "ro"), 0o500);
-  await assert.rejects(createWorkbookWriter(join(dir, "ro", "h.xlsx"))(sheet("a")), /close the workbook and re-run/);
+  await assert.rejects(createWorkbookWriter(join(dir, "ro", "h.xlsx"))([sheet("a")]), /close the workbook and re-run/);
   chmodSync(join(dir, "ro"), 0o700);
 });

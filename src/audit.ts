@@ -1,5 +1,6 @@
 import { access, constants, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { findingRow, findingsOf, FINDINGS_COLUMNS, FINDINGS_HEADERS, type Finding } from "./findings.ts";
 
 export const CONCURRENCY = 3; // drop to 1 if runs prove unstable
 export const MAX_RETRIES = 3;
@@ -21,7 +22,7 @@ export type RunOptions = {
   fixtureText: string;
   fixtureName: string;
   psi: PsiRequest;
-  writeSheet: (sheet: Sheet) => Promise<void>;
+  writeSheets: (sheets: Sheet[]) => Promise<void>; // one call so the workbook is saved once
   rawDir: string;
   renderReport: (lhr: any) => string; // Lighthouse HTML report generator
   now?: Date;
@@ -126,21 +127,6 @@ export function toRow(e: Entry, r: any): Cell[] {
   ];
 }
 
-export function toFindings(e: Entry, strategy: Strategy, r: any): Cell[][] {
-  const { categories, audits } = r.lighthouseResult;
-  const rows: Cell[][] = [];
-  for (const c of CATEGORIES) {
-    for (const ref of categories[c]?.auditRefs ?? []) {
-      const a = audits[ref.id];
-      // Scored = everything except these modes (newer Lighthouse also uses "metricSavings").
-      if (!a || ["informative", "manual", "notApplicable", "error"].includes(a.scoreDisplayMode)) continue;
-      if (typeof a.score !== "number" || a.score >= 0.9) continue;
-      rows.push([e.label, strategy, categories[c].title ?? c, a.title, a.score, a.displayValue ?? null]);
-    }
-  }
-  return rows;
-}
-
 export async function runAudit(o: RunOptions): Promise<{ failed: number; sheetName: string }> {
   const entries = parseFixture(o.fixtureText); // throws before any request
   const now = o.now ?? new Date();
@@ -167,12 +153,12 @@ export async function runAudit(o: RunOptions): Promise<{ failed: number; sheetNa
         const lh = resp?.lighthouseResult;
         if (!lh?.categories || lh.runtimeError) throw new Error(`Lighthouse failed: ${lh?.runtimeError?.message ?? "no result in response"}`);
         emit({ type: "done", ...job, ms: performance.now() - t0 });
-        return { entry, strategy, resp, row: toRow(entry, resp), findings: toFindings(entry, strategy, resp), error: null };
+        return { i, entry, strategy, resp, row: toRow(entry, resp), findings: findingsOf(entry.label, strategy, lh), error: null };
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         emit({ type: "failed", ...job, message: msg, ms: performance.now() - t0 });
         const row: Cell[] = [entry.label, entry.type, entry.url, ...Array(10).fill(null), msg];
-        return { entry, strategy, resp: null, row, findings: [] as Cell[][], error: msg };
+        return { i, entry, strategy, resp: null, row, findings: [] as Finding[], error: msg };
       }
     }),
     CONCURRENCY,
@@ -182,19 +168,23 @@ export async function runAudit(o: RunOptions): Promise<{ failed: number; sheetNa
   const scoreColumns = [3, 4, 5, 6];
   const sheetName = stamp(now);
   const version = results.find((r) => r.resp)?.resp.lighthouseResult.lighthouseVersion ?? "unknown";
-  await o.writeSheet({
-    name: sheetName,
-    details: [["Run time", now.toISOString()], ["Lighthouse version", version], ["Fixture file", o.fixtureName]],
-    tables: [
-      { title: "Mobile", headers: HEADERS, rows: of("mobile").map((r) => r.row), scoreColumns, columns: RESULT_COLUMNS },
-      { title: "Desktop", headers: HEADERS, rows: of("desktop").map((r) => r.row), scoreColumns, columns: RESULT_COLUMNS },
-      {
-        title: "Findings",
-        headers: ["Label", "Strategy", "Category", "Audit", "Score", "Display value"],
-        rows: results.flatMap((r) => r.findings),
-        filter: true,
-      },
-    ],
-  });
+  const findings = [...results]
+    .sort((a, b) => a.i - b.i || (a.strategy === b.strategy ? 0 : a.strategy === "mobile" ? -1 : 1))
+    .flatMap((r) => r.findings);
+  await o.writeSheets([
+    {
+      name: sheetName,
+      details: [["Run time", now.toISOString()], ["Lighthouse version", version], ["Fixture file", o.fixtureName]],
+      tables: [
+        { title: "Mobile", headers: HEADERS, rows: of("mobile").map((r) => r.row), scoreColumns, columns: RESULT_COLUMNS },
+        { title: "Desktop", headers: HEADERS, rows: of("desktop").map((r) => r.row), scoreColumns, columns: RESULT_COLUMNS },
+      ],
+    },
+    {
+      name: `${sheetName} findings`,
+      details: [],
+      tables: [{ title: "Findings", headers: FINDINGS_HEADERS, rows: findings.map(findingRow), filter: true, columns: FINDINGS_COLUMNS }],
+    },
+  ]);
   return { failed: results.filter((r) => r.error).length, sheetName };
 }

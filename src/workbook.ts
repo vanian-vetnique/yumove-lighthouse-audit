@@ -24,27 +24,22 @@ const HEADER_FILL = solid("FF334155");
 const FIRST_COL = 2; // column A is a blank gutter
 const DEFAULT_WIDTH = 14;
 
-export function createWorkbookWriter(path: string) {
-  return async (sheet: Sheet) => {
-    const wb = new ExcelJS.Workbook();
-    if (existsSync(path)) await wb.xlsx.readFile(path);
-    let name = sheet.name;
-    for (let n = 2; wb.getWorksheet(name); n++) name = `${sheet.name} (${n})`;
+function addSheet(wb: ExcelJS.Workbook, sheet: Sheet, name: string) {
     const ws = wb.addWorksheet(name, { views: [{ showGridLines: false }] });
 
     const put = (cells: Cell[]) => ws.addRow([null, ...cells]); // shift right of the gutter
     const title = (t: string) => { const c = put([t]).getCell(FIRST_COL); c.font = { bold: true, size: 13 }; };
 
     ws.addRow([]); // blank first row
-    title("Run details");
+    if (sheet.details.length) title("Run details");
     for (const d of sheet.details) {
       const row = put(d);
       ws.mergeCells(row.number, FIRST_COL + 1, row.number, FIRST_COL + 2); // value spans two columns
       row.getCell(FIRST_COL).font = { bold: true };
       for (let c = FIRST_COL; c <= FIRST_COL + 2; c++) { row.getCell(c).border = BORDER; row.getCell(c).alignment = { vertical: "top" }; }
     }
-    for (const t of sheet.tables) {
-      ws.addRow([]);
+    sheet.tables.forEach((t, ti) => {
+      if (ti > 0 || sheet.details.length) ws.addRow([]);
       title(t.title);
       const cols = t.headers.map((_, i) => t.columns?.[i] ?? {});
       const header = put(t.headers);
@@ -81,13 +76,23 @@ export function createWorkbookWriter(path: string) {
           });
         }
       }
-    }
+    });
     // Tables stack on shared columns, so a column is as wide as the widest table asks.
     ws.getColumn(1).width = 3;
     const ncols = Math.max(...sheet.tables.map((t) => t.headers.length));
     for (let i = 0; i < ncols; i++) {
       ws.getColumn(FIRST_COL + i).width = Math.max(DEFAULT_WIDTH, ...sheet.tables.map((t) => t.columns?.[i]?.width ?? 0));
     }
+}
+
+export function createWorkbookWriter(path: string) {
+  return async (sheets: Sheet[]) => {
+    const wb = new ExcelJS.Workbook();
+    if (existsSync(path)) await wb.xlsx.readFile(path);
+    // One suffix for the whole run so its tabs stay paired: "X", "X findings" -> "X (2)", "X findings (2)".
+    let suffix = "";
+    for (let n = 2; sheets.some((s) => wb.getWorksheet(s.name + suffix)); n++) suffix = ` (${n})`;
+    for (const sheet of sheets) addSheet(wb, sheet, sheet.name + suffix);
 
     try {
       await mkdir(dirname(path), { recursive: true });
