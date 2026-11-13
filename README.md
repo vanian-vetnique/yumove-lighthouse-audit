@@ -1,6 +1,6 @@
 # YuMove Lighthouse audit
 
-Runs a list of public URLs through the PageSpeed Insights (PSI) API (mobile, then desktop, all four Lighthouse categories) and adds one new tab per run to an Excel workbook. Lighthouse HTML reports (one per URL and strategy) are saved to `raw-results/<run>/`; open them in a browser.
+Runs a list of public URLs through the PageSpeed Insights (PSI) API (mobile, then desktop, all four Lighthouse categories) and adds one new tab per run to an Excel workbook. Lighthouse HTML reports (one per URL and strategy) are saved to `<RAW_RESULTS_PATH or raw-results>/<run>/`; open them in a browser.
 
 ## Setup
 
@@ -8,7 +8,8 @@ Runs a list of public URLs through the PageSpeed Insights (PSI) API (mobile, the
 2. In Google Cloud, create a project, enable the **PageSpeed Insights API**, and create an API key restricted to that API.
 3. `cp .env.example .env` and set:
    - `PSI_API_KEY` — the key (required).
-   - `AUDIT_WORKBOOK_PATH` — optional; default `reports/lighthouse-history.xlsx`. Point it into a OneDrive/SharePoint-synced folder, e.g. `~/OneDrive - Company/Reports/lighthouse-history.xlsx` (use the absolute path; `~` is not expanded).
+   - `AUDIT_WORKBOOK_PATH` — optional; the full path of the **`.xlsx` file** (not a folder); default `reports/lighthouse-history.xlsx`. Point it into a OneDrive/SharePoint-synced folder, e.g. `~/OneDrive - Company/Reports/lighthouse-history.xlsx` (use the absolute path; `~` is not expanded).
+   - `RAW_RESULTS_PATH` — optional; a **folder** (not a file) for the raw Lighthouse HTML reports, e.g. a OneDrive-synced folder (absolute path). Blank uses `raw-results/` in the repo. Each run adds a timestamped subfolder; old runs are never deleted. The run fails before any PSI call if the folder can't be written.
 4. Edit `fixtures/urls.json`: an array of `{ "label", "type", "url" }`. URLs must be https and labels unique. Mark preview-theme URLs in the label, e.g. `"Home (preview)"`.
 
 ## Run
@@ -20,6 +21,8 @@ npm test && npm run typecheck
 ```
 
 Exit code is non-zero if any URL failed (error rows appear in the tables) or the workbook could not be saved. If the save fails because the file is open in Excel, close it and re-run; the HTML reports are already on disk.
+
+While running, the CLI prints a line when each call starts (`[n/total] strategy label url`) and when it finishes or fails.
 
 ## Reading the report
 

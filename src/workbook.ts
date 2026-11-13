@@ -7,6 +7,8 @@ import type { Sheet } from "./audit.ts";
 const DEFAULT_PATH = "reports/lighthouse-history.xlsx";
 export const workbookPath = (env: Record<string, string | undefined>) => env.AUDIT_WORKBOOK_PATH || DEFAULT_PATH;
 
+export const rawResultsPath = (env: Record<string, string | undefined>) => env.RAW_RESULTS_PATH || "raw-results";
+
 const fill = (argb: string) => ({ type: "pattern" as const, pattern: "solid" as const, bgColor: { argb } });
 // Lighthouse bands; scores are rounded integers so 89.5 splits 89 from 90.
 const BANDS = [

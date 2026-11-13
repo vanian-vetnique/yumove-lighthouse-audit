@@ -4,7 +4,7 @@ import { chmodSync, mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ExcelJS from "exceljs";
-import { createWorkbookWriter, workbookPath } from "../src/workbook.ts";
+import { createWorkbookWriter, workbookPath, rawResultsPath } from "../src/workbook.ts";
 import type { Sheet } from "../src/audit.ts";
 
 const sheet = (name: string): Sheet => ({
@@ -19,6 +19,12 @@ const sheet = (name: string): Sheet => ({
 test("workbook path: default and env override", () => {
   assert.equal(workbookPath({}), "reports/lighthouse-history.xlsx");
   assert.equal(workbookPath({ AUDIT_WORKBOOK_PATH: "/x/y.xlsx" }), "/x/y.xlsx");
+});
+
+test("raw results path: default, blank and env override", () => {
+  assert.equal(rawResultsPath({}), "raw-results");
+  assert.equal(rawResultsPath({ RAW_RESULTS_PATH: "" }), "raw-results");
+  assert.equal(rawResultsPath({ RAW_RESULTS_PATH: "/x/raw" }), "/x/raw");
 });
 
 test("creates workbook, then adds tabs without touching existing ones; names stay unique", async () => {

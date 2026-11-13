@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readdirSync } from "node:fs";
+import { mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runAudit, type PsiRequest, type Sheet } from "../src/audit.ts";
+import { runAudit, type PsiRequest, type Sheet, type Progress } from "../src/audit.ts";
 
 const fixture = JSON.stringify([
   { label: "Home", type: "home", url: "https://example.com/" },
@@ -191,4 +191,51 @@ test("never more than 3 calls in flight", async () => {
   }, many);
   await run();
   assert.equal(peak, 3);
+});
+
+const one = JSON.stringify([{ label: "A", type: "x", url: "https://a.com" }]);
+
+test("progress: start then done per call, with position, strategy, label, url and duration", async () => {
+  const events: Progress[] = [];
+  const { rawDir } = setup(async () => resp());
+  await runAudit({ fixtureText: fixture, fixtureName: "f", psi: async () => resp(), writeSheet: async () => {}, rawDir, renderReport: () => "<html></html>", sleep: async () => {}, onProgress: (e) => void events.push(e) });
+  const mobileHome = events.filter((e) => e.strategy === "mobile" && e.label === "Home");
+  assert.deepEqual(mobileHome.map((e) => e.type), ["start", "done"]);
+  assert.equal(mobileHome[0].index, 1);
+  assert.equal(mobileHome[0].total, 4);
+  assert.equal(mobileHome[0].url, "https://example.com/");
+  assert.equal(typeof (mobileHome[1] as any).ms, "number");
+  assert.equal(events.filter((e) => e.type === "start").length, 4);
+  assert.equal(events.filter((e) => e.type === "done").length, 4);
+});
+
+test("progress: failures report the message; retries report the attempt number", async () => {
+  const events: Progress[] = [];
+  const n = { mobile: 0 };
+  const psi: PsiRequest = async ({ strategy }) => {
+    if (strategy === "desktop") throw Object.assign(new Error("PSI 400: bad"), { status: 400 });
+    if (n.mobile++ < 1) throw Object.assign(new Error("PSI 503"), { status: 503 });
+    return resp();
+  };
+  const { rawDir } = setup(psi, one);
+  await runAudit({ fixtureText: one, fixtureName: "f", psi, writeSheet: async () => {}, rawDir, renderReport: () => "<html></html>", sleep: async () => {}, onProgress: (e) => void events.push(e) });
+  const m = events.filter((e) => e.strategy === "mobile");
+  assert.deepEqual(m.map((e) => e.type), ["start", "retry", "done"]);
+  assert.equal((m[1] as any).attempt, 2);
+  const d = events.filter((e) => e.strategy === "desktop");
+  assert.deepEqual(d.map((e) => e.type), ["start", "failed"]);
+  assert.equal((d[1] as any).message, "PSI 400: bad");
+});
+
+test("unwritable raw folder fails before any PSI call, naming the path", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "raw-"));
+  const blocker = join(dir, "file");
+  writeFileSync(blocker, "x");
+  const rawDir = join(blocker, "sub"); // parent is a file, so it can't be created
+  let calls = 0;
+  await assert.rejects(
+    runAudit({ fixtureText: one, fixtureName: "f", psi: async () => (calls++, resp()), writeSheet: async () => {}, rawDir, renderReport: () => "", sleep: async () => {} }),
+    (e: Error) => e.message.includes(rawDir),
+  );
+  assert.equal(calls, 0);
 });

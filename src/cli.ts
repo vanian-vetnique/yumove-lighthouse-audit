@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { parseArgs } from "node:util";
 import { ReportGenerator } from "lighthouse/report/generator/report-generator.js";
-import { runAudit, type PsiRequest } from "./audit.ts";
-import { createWorkbookWriter, workbookPath } from "./workbook.ts";
+import { runAudit, type Progress, type PsiRequest } from "./audit.ts";
+import { createWorkbookWriter, rawResultsPath, workbookPath } from "./workbook.ts";
 
 try { process.loadEnvFile(".env"); } catch {}
 
@@ -25,6 +25,16 @@ const psi: PsiRequest = async ({ url, strategy, categories }) => {
   return res.json();
 };
 
+const secs = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
+const onProgress = (e: Progress) => {
+  const tag = `[${e.index}/${e.total}] ${e.strategy} ${e.label}`;
+  if (e.type === "start") console.log(`${tag} ${e.url}`);
+  else if (e.type === "retry") console.log(`${tag} retrying (attempt ${e.attempt})`);
+  else if (e.type === "done") console.log(`${tag} done in ${secs(e.ms)}`);
+  else console.log(`${tag} FAILED after ${secs(e.ms)}: ${e.message}`);
+};
+
+let runDir = "";
 try {
   const { values } = parseArgs({ options: { fixture: { type: "string", default: "fixtures/urls.json" } } });
   const { failed, sheetName } = await runAudit({
@@ -32,10 +42,12 @@ try {
     fixtureName: basename(values.fixture!),
     psi,
     writeSheet: createWorkbookWriter(workbookPath(process.env)),
-    rawDir: "raw-results",
+    rawDir: rawResultsPath(process.env),
+    onProgress,
+    onRunDir: (d) => { runDir = d; },
     renderReport: (lhr) => ReportGenerator.generateReportHtml(lhr),
   });
-  console.log(`Wrote tab "${sheetName}"${failed ? `; ${failed} call(s) failed` : ""}`);
+  console.log(`Wrote tab "${sheetName}"${failed ? `; ${failed} call(s) failed` : ""}. Raw reports: ${runDir}`);
   process.exitCode = failed ? 1 : 0;
 } catch (e) {
   console.error((e as Error).message);

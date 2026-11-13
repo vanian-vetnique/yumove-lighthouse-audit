@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { access, constants, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export const CONCURRENCY = 3; // drop to 1 if runs prove unstable
@@ -10,6 +10,12 @@ export type Cell = string | number | null;
 export type Table = { title: string; headers: string[]; rows: Cell[][]; scoreColumns?: number[]; filter?: boolean };
 export type Sheet = { name: string; details: [string, string][]; tables: Table[] };
 export type PsiRequest = (p: { url: string; strategy: Strategy; categories: readonly string[] }) => Promise<any>;
+type Job = { index: number; total: number; strategy: Strategy; label: string; url: string };
+export type Progress =
+  | (Job & { type: "start" })
+  | (Job & { type: "retry"; attempt: number })
+  | (Job & { type: "done"; ms: number })
+  | (Job & { type: "failed"; message: string; ms: number });
 export type RunOptions = {
   fixtureText: string;
   fixtureName: string;
@@ -19,6 +25,8 @@ export type RunOptions = {
   renderReport: (lhr: any) => string; // Lighthouse HTML report generator
   now?: Date;
   sleep?: (ms: number) => Promise<void>;
+  onProgress?: (e: Progress) => void;
+  onRunDir?: (dir: string) => void; // reports the run folder once it is ready
 };
 
 export function parseFixture(text: string): Entry[] {
@@ -54,12 +62,13 @@ const status = (e: any): number | undefined => e?.status;
 const retryable = (e: unknown) => status(e) === undefined || status(e) === 429 || status(e)! >= 500;
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-async function withRetry<T>(fn: () => Promise<T>, sleep: (ms: number) => Promise<void>): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, sleep: (ms: number) => Promise<void>, onRetry: (attempt: number) => void): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await fn();
     } catch (e) {
       if (attempt >= MAX_RETRIES || !retryable(e)) throw e;
+      onRetry(attempt + 2);
       await sleep(1000 * 2 ** attempt);
     }
   }
@@ -129,19 +138,31 @@ export async function runAudit(o: RunOptions): Promise<{ failed: number; sheetNa
   const now = o.now ?? new Date();
   const sleep = o.sleep ?? defaultSleep;
   const runDir = join(o.rawDir, stamp(now).replace(/ /g, "_"));
-  await mkdir(runDir, { recursive: true });
+  try {
+    await mkdir(runDir, { recursive: true });
+    await access(runDir, constants.W_OK);
+  } catch (e) {
+    throw new Error(`Cannot write raw results to ${runDir}: ${(e as Error).message}`);
+  }
+  o.onRunDir?.(runDir);
+  const emit = o.onProgress ?? (() => {});
 
   const jobs = (["mobile", "desktop"] as const).flatMap((strategy) => entries.map((entry, i) => ({ strategy, entry, i })));
   const results = await pool(
-    jobs.map(({ strategy, entry, i }) => async () => {
+    jobs.map(({ strategy, entry, i }, n) => async () => {
+      const job = { index: n + 1, total: jobs.length, strategy, label: entry.label, url: entry.url };
+      const t0 = performance.now();
+      emit({ type: "start", ...job });
       try {
-        const resp = await withRetry(() => o.psi({ url: entry.url, strategy, categories: CATEGORIES }), sleep);
+        const resp = await withRetry(() => o.psi({ url: entry.url, strategy, categories: CATEGORIES }), sleep, (attempt) => emit({ type: "retry", ...job, attempt }));
         await writeFile(join(runDir, `${pad(i + 1)}-${slug(entry.label)}-${strategy}.html`), o.renderReport(resp.lighthouseResult));
         const lh = resp?.lighthouseResult;
         if (!lh?.categories || lh.runtimeError) throw new Error(`Lighthouse failed: ${lh?.runtimeError?.message ?? "no result in response"}`);
+        emit({ type: "done", ...job, ms: performance.now() - t0 });
         return { entry, strategy, resp, row: toRow(entry, resp), findings: toFindings(entry, strategy, resp), error: null };
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
+        emit({ type: "failed", ...job, message: msg, ms: performance.now() - t0 });
         const row: Cell[] = [entry.label, entry.type, entry.url, ...Array(10).fill(null), msg];
         return { entry, strategy, resp: null, row, findings: [] as Cell[][], error: msg };
       }
