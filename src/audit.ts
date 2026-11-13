@@ -132,7 +132,8 @@ export async function runAudit(o: RunOptions): Promise<{ failed: number; sheetNa
   const entries = parseFixture(o.fixtureText); // throws before any request
   const now = o.now ?? new Date();
   const sleep = o.sleep ?? defaultSleep;
-  const runDir = join(o.rawDir, stamp(now).replace(/ /g, "_"));
+  // Milliseconds keep two runs started in the same second from overwriting each other's reports.
+  const runDir = join(o.rawDir, `${stamp(now).replace(/ /g, "_")}.${String(now.getMilliseconds()).padStart(3, "0")}`);
   try {
     await mkdir(runDir, { recursive: true });
     await access(runDir, constants.W_OK);
@@ -150,10 +151,10 @@ export async function runAudit(o: RunOptions): Promise<{ failed: number; sheetNa
       emit({ type: "start", ...job });
       try {
         const resp = await withRetry(() => o.psi({ url: entry.url, strategy, categories: CATEGORIES }), sleep, (attempt) => emit({ type: "retry", ...job, attempt }));
-        const file = join(runDir, `${pad(i + 1)}-${slug(entry.label)}-${strategy}.html`);
-        await writeFile(file, o.renderReport(resp.lighthouseResult));
         const lh = resp?.lighthouseResult;
         if (!lh?.categories || lh.runtimeError) throw new Error(`Lighthouse failed: ${lh?.runtimeError?.message ?? "no result in response"}`);
+        const file = join(runDir, `${pad(i + 1)}-${slug(entry.label)}-${strategy}.html`);
+        await writeFile(file, o.renderReport(lh));
         emit({ type: "done", ...job, ms: performance.now() - t0 });
         return { i, entry, strategy, resp, row: toRow(entry, resp), findings: findingsOf(entry.label, entry.url, strategy, lh, relative(o.workbookDir ?? ".", file).split(sep).join("/")), error: null };
       } catch (e) {

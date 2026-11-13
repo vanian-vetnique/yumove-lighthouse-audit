@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { mkdir, rename, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import ExcelJS from "exceljs";
 import type { Cell, Sheet } from "./audit.ts";
@@ -89,15 +89,21 @@ export function createWorkbookWriter(path: string) {
   return async (sheets: Sheet[]) => {
     const wb = new ExcelJS.Workbook();
     if (existsSync(path)) await wb.xlsx.readFile(path);
-    // One suffix for the whole run so its tabs stay paired: "X", "X findings" -> "X (2)", "X findings (2)".
+    // One suffix for the whole run so its tabs stay paired: "X", "X findings" -> "X 2", "X findings 2".
+    // shortcut: Excel caps names at 31 chars; "<stamp> findings NN" fits up to NN = 99, past that exceljs truncates.
     let suffix = "";
-    for (let n = 2; sheets.some((s) => wb.getWorksheet(s.name + suffix)); n++) suffix = ` (${n})`;
+    for (let n = 2; sheets.some((s) => wb.getWorksheet(s.name + suffix)); n++) suffix = ` ${n}`;
     for (const sheet of sheets) addSheet(wb, sheet, sheet.name + suffix);
 
+    // Write beside the file, then rename: a crash mid-write must not corrupt the history. A leftover from a hard kill is overwritten next run.
+    // shortcut: parallel runs would share this name (and lose each other's tabs anyway), add a lock if runs ever overlap.
+    const tmp = `${path}.tmp`;
     try {
       await mkdir(dirname(path), { recursive: true });
-      await wb.xlsx.writeFile(path);
+      await wb.xlsx.writeFile(tmp);
+      await rename(tmp, path);
     } catch (e) {
+      await rm(tmp, { force: true }); // a failed write or rename must not leave a partial copy in the synced folder
       throw new Error(`Could not save ${path}: close the workbook and re-run (raw results are kept). ${(e as Error).message}`);
     }
   };

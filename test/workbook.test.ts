@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { chmodSync, mkdirSync, mkdtempSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import ExcelJS from "exceljs";
 import { createWorkbookWriter, workbookPath, rawResultsPath } from "../src/workbook.ts";
 import type { Sheet } from "../src/audit.ts";
@@ -34,7 +34,8 @@ test("creates workbook, then adds tabs without touching existing ones; names sta
   await write([sheet("2026-11-13 09.05.07")]);
   await write([sheet("2026-11-13 09.05.07")]);
   const wb = await new ExcelJS.Workbook().xlsx.readFile(path);
-  assert.deepEqual(wb.worksheets.map((w) => w.name), ["2026-11-13 09.05.07", "2026-11-13 09.05.07 (2)"]);
+  assert.deepEqual(wb.worksheets.map((w) => w.name), ["2026-11-13 09.05.07", "2026-11-13 09.05.07 2"]);
+  assert.deepEqual(readdirSync(dirname(path)), ["h.xlsx"]); // the temp file is renamed away
   const ws = wb.worksheets[0];
   assert.equal(ws.getCell("B2").value, "Run details");
   assert.equal(ws.getCell("B2").font?.bold, true);
@@ -79,4 +80,15 @@ test("unwritable workbook says to close it and re-run", { skip: process.getuid?.
   chmodSync(join(dir, "ro"), 0o500);
   await assert.rejects(createWorkbookWriter(join(dir, "ro", "h.xlsx"))([sheet("a")]), /close the workbook and re-run/);
   chmodSync(join(dir, "ro"), 0o700);
+});
+
+test("a failed save removes its temp file and keeps the old workbook", async (t) => {
+  const path = join(mkdtempSync(join(tmpdir(), "wb-")), "h.xlsx");
+  await createWorkbookWriter(path)([sheet("2026-11-13 09.05.07")]);
+  const xlsx = Object.getPrototypeOf(new ExcelJS.Workbook().xlsx);
+  t.mock.method(xlsx, "writeFile", async (p: string) => { writeFileSync(p, "partial"); throw new Error("disk full"); });
+  await assert.rejects(createWorkbookWriter(path)([sheet("2026-11-14 09.05.07")]), /Could not save/);
+  assert.deepEqual(readdirSync(dirname(path)), ["h.xlsx"]);
+  t.mock.restoreAll();
+  assert.equal((await new ExcelJS.Workbook().xlsx.readFile(path)).worksheets.length, 1);
 });

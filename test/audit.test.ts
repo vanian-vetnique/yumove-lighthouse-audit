@@ -4,6 +4,7 @@ import { mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readFileSync } from "node:fs";
+import { ReportGenerator } from "lighthouse/report/generator/report-generator.js";
 import { runAudit, type PsiRequest, type Sheet, type Progress } from "../src/audit.ts";
 
 const fixture = JSON.stringify([
@@ -153,6 +154,21 @@ test("a 200 response carrying a Lighthouse runtimeError counts as a failure", as
   assert.match(String(sheets[0].tables[0].rows[0][13]), /page failed/);
 });
 
+test("a 200 response with no lighthouseResult gives the clear message, even with the real renderer", async () => {
+  const rawDir = mkdtempSync(join(tmpdir(), "raw-"));
+  const rows: any[] = [];
+  await runAudit({ fixtureText: fixture, fixtureName: "f", psi: async () => ({}), writeSheets: async (s) => void rows.push(...s), rawDir, renderReport: (l) => ReportGenerator.generateReportHtml(l), sleep: async () => {} });
+  assert.match(String(rows[0].tables[0].rows[0][13]), /no result in response/);
+});
+
+test("two runs in the same second (different ms) keep separate report folders", async () => {
+  const { run, rawDir } = setup(async () => resp());
+  await run();
+  assert.equal(readdirSync(rawDir).length, 1);
+  await runAudit({ fixtureText: fixture, fixtureName: "f", psi: async () => resp(), writeSheets: async () => {}, rawDir, renderReport: () => "x", now: new Date(2026, 10, 13, 9, 5, 7, 500) });
+  assert.equal(readdirSync(rawDir).length, 2);
+});
+
 test("never more than 3 calls in flight", async () => {
   const many = JSON.stringify(Array.from({ length: 6 }, (_, i) => ({ label: `L${i}`, type: "x", url: `https://a.com/${i}` })));
   let live = 0, peak = 0;
@@ -230,9 +246,9 @@ test("each findings row links to its own raw report, relative to the workbook fo
   const rows = asObjects(sheets[1].tables.find((t) => t.title === "Findings")!);
   const mobile = rows.find((r) => r.Strategy === "mobile")!["Raw result"];
   const desktop = rows.find((r) => r.Strategy === "desktop")!["Raw result"];
-  assert.deepEqual(mobile, { text: "Open report", hyperlink: "raw-results/2026-11-13_09.05.07/01-Home-mobile.html" });
-  assert.equal((desktop as any).hyperlink, "raw-results/2026-11-13_09.05.07/01-Home-desktop.html");
-  assert.ok(readdirSync(join(root, "raw-results/2026-11-13_09.05.07")).includes("01-Home-mobile.html"));
+  assert.deepEqual(mobile, { text: "Open report", hyperlink: "raw-results/2026-11-13_09.05.07.000/01-Home-mobile.html" });
+  assert.equal((desktop as any).hyperlink, "raw-results/2026-11-13_09.05.07.000/01-Home-desktop.html");
+  assert.ok(readdirSync(join(root, "raw-results/2026-11-13_09.05.07.000")).includes("01-Home-mobile.html"));
 });
 
 test("each run writes the run tab plus '<run> findings'; the run tab has no findings table", async () => {

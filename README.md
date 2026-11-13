@@ -36,9 +36,10 @@ Each run adds two tabs.
 - Single run per URL: lab scores vary by a few points between runs.
 - Low-traffic pages have no field data; there is no origin-level fallback.
 - The workbook is locked while open in Excel on Windows.
+- `npm audit` reports 2 moderate issues via `uuid` inside exceljs (4.4.0, its latest). The tool never calls uuid with a caller-supplied buffer, so it is not exploitable here; re-check when exceljs releases.
 - The workbook is script-owned: exceljs rewrites the whole file, so hand-added charts or objects are lost.
 - Failed calls are retried (3 times, exponential backoff) on 429, 5xx and network errors (not other 4xx).
-- Field CLS: PSI reports the percentile as CLS × 100; the script divides by 100. **Not yet verified against a live response** (see Smoke run).
+- Field CLS: PSI reports the percentile as CLS × 100; the script divides by 100. Checked against a live run (see Smoke run).
 
 ## Planned, out of scope
 
@@ -46,4 +47,4 @@ Pass/fail thresholds, a generated summary/trend tab, GitHub Actions (needs a way
 
 ## Smoke run
 
-Not yet done: the full-fixture real run (observed run time and call count) and the live CLS-scale check need a `PSI_API_KEY`. Record the results here after running `npm run audit`. Expected: 2 calls per URL.
+2026-11-13, default fixture (7 URLs): 14 calls, no retries or failures, 41–90 s per call (about 5 minutes in total at 3 at a time, estimated from the per-call times). Field CLS values came out as 0.010 and 0.000, which fits PSI's CLS × 100 percentile (an integer such as 1) divided by 100. They are coarse, so a page with a larger CLS is the stronger check next time. "Open report" links open the saved HTML.
